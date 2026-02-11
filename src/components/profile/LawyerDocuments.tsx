@@ -1,0 +1,217 @@
+import { useState, useEffect, useRef } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { FileText, Upload, Trash2, Loader2, CheckCircle, Clock, XCircle, Eye } from 'lucide-react';
+
+interface LawyerDocument {
+  id: string;
+  document_name: string;
+  document_type: string;
+  storage_path: string;
+  file_size_bytes: number | null;
+  status: string;
+  admin_notes: string | null;
+  uploaded_at: string;
+}
+
+const DOCUMENT_TYPES = [
+  { value: 'bar_certificate', label: 'Bar Council Certificate' },
+  { value: 'degree', label: 'Law Degree' },
+  { value: 'id_proof', label: 'ID Proof (Aadhar/Passport)' },
+  { value: 'experience_certificate', label: 'Experience Certificate' },
+  { value: 'other', label: 'Other Document' },
+];
+
+interface LawyerDocumentsProps {
+  userId: string;
+}
+
+export const LawyerDocuments = ({ userId }: LawyerDocumentsProps) => {
+  const [documents, setDocuments] = useState<LawyerDocument[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [selectedType, setSelectedType] = useState('bar_certificate');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchDocuments();
+  }, [userId]);
+
+  const fetchDocuments = async () => {
+    const { data, error } = await supabase
+      .from('lawyer_documents')
+      .select('*')
+      .eq('lawyer_user_id', userId)
+      .order('uploaded_at', { ascending: false });
+
+    if (!error && data) {
+      setDocuments(data as LawyerDocument[]);
+    }
+    setLoading(false);
+  };
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate: PDF, images, max 10MB
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast({ variant: 'destructive', title: 'Invalid file', description: 'Upload PDF or image files only.' });
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ variant: 'destructive', title: 'File too large', description: 'Maximum 10MB per file.' });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}_${selectedType}.${fileExt}`;
+      const storagePath = `${userId}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('lawyer-documents')
+        .upload(storagePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Insert record
+      const { error: insertError } = await supabase
+        .from('lawyer_documents')
+        .insert({
+          lawyer_user_id: userId,
+          document_name: file.name,
+          document_type: selectedType,
+          storage_path: storagePath,
+          file_size_bytes: file.size,
+        });
+
+      if (insertError) throw insertError;
+
+      toast({ title: '✅ Document uploaded!', description: 'It will be reviewed by admin.' });
+      fetchDocuments();
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Upload failed', description: error.message });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDelete = async (doc: LawyerDocument) => {
+    if (!confirm(`Delete "${doc.document_name}"?`)) return;
+
+    try {
+      await supabase.storage.from('lawyer_documents').remove([doc.storage_path]);
+      await supabase.from('lawyer_documents').delete().eq('id', doc.id);
+      toast({ title: 'Document deleted' });
+      fetchDocuments();
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Delete failed', description: error.message });
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'verified':
+        return <Badge className="bg-green-500/10 text-green-600 border-green-500/20 gap-1"><CheckCircle className="h-3 w-3" />Verified</Badge>;
+      case 'rejected':
+        return <Badge className="bg-red-500/10 text-red-600 border-red-500/20 gap-1"><XCircle className="h-3 w-3" />Rejected</Badge>;
+      default:
+        return <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20 gap-1"><Clock className="h-3 w-3" />Pending</Badge>;
+    }
+  };
+
+  const formatFileSize = (bytes: number | null) => {
+    if (!bytes) return 'Unknown';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <FileText className="h-5 w-5" />
+          Verification Documents
+        </CardTitle>
+        <CardDescription>
+          Upload your credentials for admin verification. Accepted: PDF, JPG, PNG (max 10MB each).
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Upload Section */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3 p-4 border border-dashed rounded-lg">
+          <div className="space-y-1 flex-1">
+            <p className="text-sm font-medium">Document Type</p>
+            <Select value={selectedType} onValueChange={setSelectedType}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {DOCUMENT_TYPES.map(t => (
+                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="gap-2">
+              {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              {uploading ? 'Uploading...' : 'Upload File'}
+            </Button>
+            <input ref={fileInputRef} type="file" accept=".pdf,image/*" className="hidden" onChange={handleUpload} />
+          </div>
+        </div>
+
+        {/* Documents List */}
+        {loading ? (
+          <div className="text-center py-8 text-muted-foreground">Loading documents...</div>
+        ) : documents.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <FileText className="h-12 w-12 mx-auto mb-2 opacity-30" />
+            <p>No documents uploaded yet</p>
+            <p className="text-xs">Upload your bar certificate, degree, and ID proof for verification</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {documents.map((doc) => (
+              <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex items-center gap-3 min-w-0">
+                  <FileText className="h-8 w-8 text-muted-foreground shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{doc.document_name}</p>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>{DOCUMENT_TYPES.find(t => t.value === doc.document_type)?.label || doc.document_type}</span>
+                      <span>•</span>
+                      <span>{formatFileSize(doc.file_size_bytes)}</span>
+                    </div>
+                    {doc.admin_notes && (
+                      <p className="text-xs text-muted-foreground mt-1 italic">Note: {doc.admin_notes}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {getStatusBadge(doc.status)}
+                  {doc.status === 'pending' && (
+                    <Button variant="ghost" size="sm" onClick={() => handleDelete(doc)} className="text-destructive hover:text-destructive">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
