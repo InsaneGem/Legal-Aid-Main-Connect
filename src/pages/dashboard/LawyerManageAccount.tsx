@@ -585,10 +585,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { AvatarUpload } from '@/components/profile/AvatarUpload';
 import { LawyerDocuments } from '@/components/profile/LawyerDocuments';
 import { z } from 'zod';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
+import { format, parseISO } from 'date-fns';
 import {
   ArrowLeft, Save, X, User, Mail, Phone as PhoneIcon, Shield,
-  Briefcase, GraduationCap, Languages, DollarSign, FileText, Award, Loader2
+  Briefcase, GraduationCap, Languages, DollarSign, FileText, Award, Loader2, CalendarIcon
 } from 'lucide-react';
+import { formatLawyerName } from '@/lib/lawyer-utils';
 const SPECIALIZATION_OPTIONS = [
   'Criminal Law', 'Family Law', 'Corporate Law', 'Civil Law',
   'Real Estate', 'Immigration', 'Tax Law', 'Intellectual Property',
@@ -607,6 +612,7 @@ interface PersonalInfo {
   email: string;
   phone: string | null;
   avatar_url: string | null;
+  date_of_birth: string | null;
 }
 interface ProfessionalInfo {
   bio: string;
@@ -627,7 +633,11 @@ const LawyerManageAccount = () => {
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [personal, setPersonal] = useState<PersonalInfo>({
-    full_name: '', email: '', phone: null, avatar_url: null,
+    full_name: '',
+    email: '',
+    phone: null,
+    avatar_url: null,
+    date_of_birth: null,
   });
   const [professional, setProfessional] = useState<ProfessionalInfo>({
     bio: '', education: '', bar_council_number: '', experience_years: 0,
@@ -650,6 +660,7 @@ const LawyerManageAccount = () => {
         email: profileRes.data.email || user.email || '',
         phone: profileRes.data.phone,
         avatar_url: profileRes.data.avatar_url,
+        date_of_birth: profileRes.data.date_of_birth,
       });
     }
     if (lawyerRes.data) {
@@ -692,6 +703,7 @@ const LawyerManageAccount = () => {
       supabase.from('profiles').update({
         full_name: personal.full_name.trim(),
         phone: personal.phone?.trim() || null,
+        date_of_birth: personal.date_of_birth || null,
         updated_at: new Date().toISOString(),
       }).eq('id', user.id),
       supabase.from('lawyer_profiles').update({
@@ -732,7 +744,7 @@ const LawyerManageAccount = () => {
   if (authLoading || loading) {
     return (
       // <MainLayout showFooter={false}>
-        <LawyerLayout>
+      <LawyerLayout>
         <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background">
           <div className="container max-w-5xl mx-auto px-4 py-8">
             <Skeleton className="h-10 w-64 mb-2" />
@@ -741,13 +753,13 @@ const LawyerManageAccount = () => {
             <Skeleton className="h-96 rounded-2xl" />
           </div>
         </div>
-      {/* </MainLayout> */}
+        {/* </MainLayout> */}
       </LawyerLayout>
     );
   }
   return (
     // <MainLayout showFooter={false}>
-      <LawyerLayout>
+    <LawyerLayout>
       <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background">
         <div className="container max-w-5xl mx-auto px-4 py-6 sm:py-8">
           {/* Header */}
@@ -803,11 +815,11 @@ const LawyerManageAccount = () => {
                       />
                     )}
                     <div className="space-y-1">
-                      <h3 className="font-semibold text-lg">{personal.full_name}</h3>
+                      <h3 className="font-semibold text-lg">{formatLawyerName(personal.full_name)}</h3>
                       <p className="text-sm text-muted-foreground">{personal.email}</p>
                       <div className="flex items-center gap-2 mt-2 flex-wrap">
                         <Badge variant="secondary" className="gap-1">
-                          <Shield className="h-3 w-3" /> Legal Professional
+                          <Shield className="h-3 w-3" /> Professional
                         </Badge>
                         {professional.status === 'approved' && (
                           <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">Verified</Badge>
@@ -851,10 +863,49 @@ const LawyerManageAccount = () => {
                         placeholder="Enter your phone number"
                       />
                     </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label className="flex items-center gap-2">
+                        <CalendarIcon className="h-4 w-4 text-muted-foreground" /> Date of Birth
+                      </Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              'w-full justify-start text-left font-normal',
+                              !personal.date_of_birth && 'text-muted-foreground'
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {personal.date_of_birth ? format(parseISO(personal.date_of_birth), 'PPP') : <span>Select date of birth</span>}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={personal.date_of_birth ? parseISO(personal.date_of_birth) : undefined}
+                            onSelect={(date) => setPersonal(prev => ({ ...prev, date_of_birth: date ? format(date, 'yyyy-MM-dd') : null }))}
+                            disabled={(date) => date > new Date() || date < new Date('1900-01-01')}
+                            initialFocus
+                            className={cn('p-3 pointer-events-auto')}
+                            captionLayout="dropdown-buttons"
+                            fromYear={1900}
+                            toYear={new Date().getFullYear()}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+
+
                   </div>
                 </CardContent>
               </Card>
             </TabsContent>
+
+
+
+
+
             {/* ─── PROFESSIONAL TAB ─── */}
             <TabsContent value="professional" className="space-y-6">
               {/* Bio */}
@@ -1032,7 +1083,7 @@ const LawyerManageAccount = () => {
           </div>
         </div>
       </div>
-    {/* </MainLayout> */}
+      {/* </MainLayout> */}
     </LawyerLayout>
   );
 };

@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { MessageSquare, Video, Phone, User, ArrowLeft, ArrowRight, Calendar, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { calculateAge } from '@/lib/ageUtils';
 interface ConsultationWithClient {
   id: string;
   type: 'chat' | 'audio' | 'video';
@@ -21,7 +22,9 @@ interface ConsultationWithClient {
   client_email?: string;
   client_avatar?: string | null;
   total_amount?: number | null;
+  date_of_birth?: string | null;
 }
+
 const LawyerConsultations = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -101,7 +104,7 @@ const LawyerConsultations = () => {
               </div>
             </div>
             <div className="flex items-center gap-4">
-              {c.total_amount != null && <span className="font-semibold text-sm">${c.total_amount.toFixed(2)}</span>}
+              {c.total_amount != null && <span className="font-semibold text-sm">₹{c.total_amount.toFixed(2)}</span>}
               {getStatusBadge(c.status)}
               <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
             </div>

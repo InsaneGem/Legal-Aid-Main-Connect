@@ -122,7 +122,8 @@ export const BookingNotificationProvider = ({ children }: BookingNotificationPro
 
   const acceptAndStart = (notification: BookingNotification) => {
     dismissNotification(notification.id);
-    navigate(`/consultation/${notification.consultationId}`);
+    // navigate(`/consultation/${notification.consultationId}`);
+     navigate(`/lawyer/consultation/${notification.consultationId}`);
   };
 
   const getTypeIcon = (type: string) => {

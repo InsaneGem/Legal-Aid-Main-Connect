@@ -10,14 +10,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
-  Users, Briefcase, TrendingUp, CheckCircle, XCircle, Clock, Shield, Eye, 
-  GraduationCap, Languages, DollarSign, Search, Edit, Ban, UserCheck, 
-MessageSquare, Calendar, Wallet, Save, CreditCard, ArrowDownUp, Trash2, FileText
+import {
+  Users, Briefcase, TrendingUp, CheckCircle, XCircle, Clock, Shield, Eye,
+  GraduationCap, Languages, DollarSign, Search, Edit, Ban, UserCheck,
+  MessageSquare, Calendar, Wallet, Save, CreditCard, ArrowDownUp, Trash2, FileText
 } from 'lucide-react';
 import { DocumentVerification } from '@/components/admin/DocumentVerification';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { formatLawyerName } from '@/lib/lawyer-utils';
 import {
   Dialog,
   DialogContent,
@@ -112,7 +113,7 @@ const AdminDashboard = () => {
   const { user, role, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+
   const [stats, setStats] = useState({ totalClients: 0, totalLawyers: 0, pendingLawyers: 0, totalConsultations: 0, totalRevenue: 0 });
   const [lawyers, setLawyers] = useState<LawyerProfile[]>([]);
   const [clients, setClients] = useState<ClientProfile[]>([]);
@@ -120,22 +121,22 @@ const AdminDashboard = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Selected items for editing
   const [selectedLawyer, setSelectedLawyer] = useState<LawyerProfile | null>(null);
   const [selectedClient, setSelectedClient] = useState<ClientProfile | null>(null);
   const [selectedConsultation, setSelectedConsultation] = useState<Consultation | null>(null);
-  
+
   // Dialog states
   const [lawyerEditOpen, setLawyerEditOpen] = useState(false);
   const [clientEditOpen, setClientEditOpen] = useState(false);
   const [consultationEditOpen, setConsultationEditOpen] = useState(false);
-  
+
   // Edit form states
   const [editLawyerForm, setEditLawyerForm] = useState<Partial<LawyerProfile>>({});
   const [editClientForm, setEditClientForm] = useState<Partial<ClientProfile & { wallet_balance: number }>>({});
   const [editConsultationForm, setEditConsultationForm] = useState<Partial<Consultation>>({});
-  
+
   const [searchTerm, setSearchTerm] = useState('');
   const [lawyerFilter, setLawyerFilter] = useState<string>('all');
 
@@ -202,7 +203,7 @@ const AdminDashboard = () => {
         .from('consultations')
         .select('commission_amount')
         .eq('status', 'completed');
-      
+
       const totalRevenue = revenueData?.reduce((sum, c) => sum + (c.commission_amount || 0), 0) || 0;
 
       setStats({
@@ -230,7 +231,8 @@ const AdminDashboard = () => {
           const profile = profiles?.find(p => p.id === lawyer.user_id);
           return {
             ...lawyer,
-            full_name: profile?.full_name || 'Unknown',
+            // full_name: profile?.full_name || 'Unknown',
+            full_name: formatLawyerName(profile?.full_name, 'Unknown'),
             email: profile?.email || 'N/A',
           };
         });
@@ -284,7 +286,7 @@ const AdminDashboard = () => {
           ...consultationsData.map(c => c.client_id),
           ...consultationsData.map(c => c.lawyer_id)
         ])];
-        
+
         const { data: allProfiles } = await supabase
           .from('profiles')
           .select('id, full_name')
@@ -296,7 +298,8 @@ const AdminDashboard = () => {
           return {
             ...consultation,
             client_name: clientProfile?.full_name || 'Unknown',
-            lawyer_name: lawyerProfile?.full_name || 'Unknown',
+            // lawyer_name: lawyerProfile?.full_name || 'Unknown',
+            lawyer_name: formatLawyerName(lawyerProfile?.full_name, 'Unknown'),
           };
         });
         setConsultations(enrichedConsultations);
@@ -371,7 +374,7 @@ const AdminDashboard = () => {
 
   const saveLawyerEdit = async () => {
     if (!selectedLawyer) return;
-    
+
     const { error } = await supabase
       .from('lawyer_profiles')
       .update({
@@ -411,7 +414,7 @@ const AdminDashboard = () => {
 
   const saveClientEdit = async () => {
     if (!selectedClient) return;
-    
+
     // Update profile
     const { error: profileError } = await supabase
       .from('profiles')
@@ -451,7 +454,7 @@ const AdminDashboard = () => {
 
   const saveConsultationEdit = async () => {
     if (!selectedConsultation) return;
-    
+
     const { error } = await supabase
       .from('consultations')
       .update({
@@ -519,7 +522,7 @@ const AdminDashboard = () => {
   // DELETE FUNCTIONS
   const deleteLawyer = async (lawyer: LawyerProfile) => {
     if (!confirm(`Are you sure you want to delete lawyer ${lawyer.full_name}? This will also delete their profile and role.`)) return;
-    
+
     try {
       // Delete lawyer profile first
       const { error: lawyerError } = await supabase
@@ -560,7 +563,7 @@ const AdminDashboard = () => {
 
   const deleteClient = async (client: ClientProfile) => {
     if (!confirm(`Are you sure you want to delete client ${client.full_name}? This will also delete their profile and wallet.`)) return;
-    
+
     try {
       // Delete user role
       const { error: roleError } = await supabase
@@ -623,12 +626,12 @@ const AdminDashboard = () => {
 
   const filteredLawyers = lawyers.filter(lawyer => {
     const matchesSearch = lawyer.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         lawyer.email?.toLowerCase().includes(searchTerm.toLowerCase());
+      lawyer.email?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = lawyerFilter === 'all' || lawyer.status === lawyerFilter;
     return matchesSearch && matchesFilter;
   });
 
-  const filteredClients = clients.filter(client => 
+  const filteredClients = clients.filter(client =>
     client.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     client.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -733,7 +736,7 @@ const AdminDashboard = () => {
                 <Users className="h-3 w-3" />
                 Clients
               </TabsTrigger>
-               <TabsTrigger value="documents" className="flex items-center gap-1 text-xs">
+              <TabsTrigger value="documents" className="flex items-center gap-1 text-xs">
                 <FileText className="h-3 w-3" />
                 Documents
               </TabsTrigger>
@@ -808,7 +811,7 @@ const AdminDashboard = () => {
                             <TableCell className="text-muted-foreground text-xs">{lawyer.email}</TableCell>
                             <TableCell>{getStatusBadge(lawyer.status)}</TableCell>
                             <TableCell>{lawyer.experience_years || 0} yrs</TableCell>
-                            <TableCell className="text-xs">${lawyer.price_per_minute}/min</TableCell>
+                            <TableCell className="text-xs">₹{lawyer.price_per_minute}/min</TableCell>
                             <TableCell>
                               <Badge variant={lawyer.is_available ? "default" : "outline"}>
                                 {lawyer.is_available ? 'Online' : 'Offline'}
@@ -818,17 +821,17 @@ const AdminDashboard = () => {
                               <div className="flex items-center justify-end gap-1">
                                 {lawyer.status === 'pending' && (
                                   <>
-                                    <Button 
-                                      variant="ghost" 
-                                      size="sm" 
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
                                       className="text-green-600 hover:text-green-700 hover:bg-green-100"
                                       onClick={() => approveLawyer(lawyer)}
                                     >
                                       <CheckCircle className="h-4 w-4" />
                                     </Button>
-                                    <Button 
-                                      variant="ghost" 
-                                      size="sm" 
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
                                       className="text-red-600 hover:text-red-700 hover:bg-red-100"
                                       onClick={() => rejectLawyer(lawyer)}
                                     >
@@ -837,9 +840,9 @@ const AdminDashboard = () => {
                                   </>
                                 )}
                                 {lawyer.status === 'rejected' && (
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
                                     className="text-green-600 hover:text-green-700 hover:bg-green-100"
                                     onClick={() => approveLawyer(lawyer)}
                                   >
@@ -847,9 +850,9 @@ const AdminDashboard = () => {
                                   </Button>
                                 )}
                                 {lawyer.status === 'approved' && (
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
                                     className="text-amber-600 hover:text-amber-700 hover:bg-amber-100"
                                     onClick={() => rejectLawyer(lawyer)}
                                     title="Reject lawyer"
@@ -1116,7 +1119,7 @@ const AdminDashboard = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Status</Label>
-                <Select value={editLawyerForm.status || ''} onValueChange={(v) => setEditLawyerForm({...editLawyerForm, status: v})}>
+                <Select value={editLawyerForm.status || ''} onValueChange={(v) => setEditLawyerForm({ ...editLawyerForm, status: v })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
@@ -1130,7 +1133,7 @@ const AdminDashboard = () => {
               </div>
               <div className="space-y-2">
                 <Label>Availability</Label>
-                <Select value={editLawyerForm.is_available ? 'online' : 'offline'} onValueChange={(v) => setEditLawyerForm({...editLawyerForm, is_available: v === 'online'})}>
+                <Select value={editLawyerForm.is_available ? 'online' : 'offline'} onValueChange={(v) => setEditLawyerForm({ ...editLawyerForm, is_available: v === 'online' })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -1144,9 +1147,9 @@ const AdminDashboard = () => {
 
             <div className="space-y-2">
               <Label>Bio</Label>
-              <Textarea 
-                value={editLawyerForm.bio || ''} 
-                onChange={(e) => setEditLawyerForm({...editLawyerForm, bio: e.target.value})}
+              <Textarea
+                value={editLawyerForm.bio || ''}
+                onChange={(e) => setEditLawyerForm({ ...editLawyerForm, bio: e.target.value })}
                 rows={3}
               />
             </div>
@@ -1154,16 +1157,16 @@ const AdminDashboard = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Education</Label>
-                <Input 
-                  value={editLawyerForm.education || ''} 
-                  onChange={(e) => setEditLawyerForm({...editLawyerForm, education: e.target.value})}
+                <Input
+                  value={editLawyerForm.education || ''}
+                  onChange={(e) => setEditLawyerForm({ ...editLawyerForm, education: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
                 <Label>Bar Council Number</Label>
-                <Input 
-                  value={editLawyerForm.bar_council_number || ''} 
-                  onChange={(e) => setEditLawyerForm({...editLawyerForm, bar_council_number: e.target.value})}
+                <Input
+                  value={editLawyerForm.bar_council_number || ''}
+                  onChange={(e) => setEditLawyerForm({ ...editLawyerForm, bar_council_number: e.target.value })}
                 />
               </div>
             </div>
@@ -1171,45 +1174,45 @@ const AdminDashboard = () => {
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Experience (years)</Label>
-                <Input 
+                <Input
                   type="number"
-                  value={editLawyerForm.experience_years || 0} 
-                  onChange={(e) => setEditLawyerForm({...editLawyerForm, experience_years: parseInt(e.target.value) || 0})}
+                  value={editLawyerForm.experience_years || 0}
+                  onChange={(e) => setEditLawyerForm({ ...editLawyerForm, experience_years: parseInt(e.target.value) || 0 })}
                 />
               </div>
               <div className="space-y-2">
                 <Label>Price/Minute ($)</Label>
-                <Input 
+                <Input
                   type="number"
                   step="0.01"
-                  value={editLawyerForm.price_per_minute || 0} 
-                  onChange={(e) => setEditLawyerForm({...editLawyerForm, price_per_minute: parseFloat(e.target.value) || 0})}
+                  value={editLawyerForm.price_per_minute || 0}
+                  onChange={(e) => setEditLawyerForm({ ...editLawyerForm, price_per_minute: parseFloat(e.target.value) || 0 })}
                 />
               </div>
               <div className="space-y-2">
                 <Label>Session Price ($)</Label>
-                <Input 
+                <Input
                   type="number"
                   step="0.01"
-                  value={editLawyerForm.session_price || 0} 
-                  onChange={(e) => setEditLawyerForm({...editLawyerForm, session_price: parseFloat(e.target.value) || 0})}
+                  value={editLawyerForm.session_price || 0}
+                  onChange={(e) => setEditLawyerForm({ ...editLawyerForm, session_price: parseFloat(e.target.value) || 0 })}
                 />
               </div>
             </div>
 
             <div className="space-y-2">
               <Label>Specializations (comma-separated)</Label>
-              <Input 
-                value={editLawyerForm.specializations?.join(', ') || ''} 
-                onChange={(e) => setEditLawyerForm({...editLawyerForm, specializations: e.target.value.split(',').map(s => s.trim()).filter(Boolean)})}
+              <Input
+                value={editLawyerForm.specializations?.join(', ') || ''}
+                onChange={(e) => setEditLawyerForm({ ...editLawyerForm, specializations: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
               />
             </div>
 
             <div className="space-y-2">
               <Label>Languages (comma-separated)</Label>
-              <Input 
-                value={editLawyerForm.languages?.join(', ') || ''} 
-                onChange={(e) => setEditLawyerForm({...editLawyerForm, languages: e.target.value.split(',').map(s => s.trim()).filter(Boolean)})}
+              <Input
+                value={editLawyerForm.languages?.join(', ') || ''}
+                onChange={(e) => setEditLawyerForm({ ...editLawyerForm, languages: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
               />
             </div>
           </div>
@@ -1235,27 +1238,27 @@ const AdminDashboard = () => {
           <div className="space-y-4 mt-4">
             <div className="space-y-2">
               <Label>Full Name</Label>
-              <Input 
-                value={editClientForm.full_name || ''} 
-                onChange={(e) => setEditClientForm({...editClientForm, full_name: e.target.value})}
+              <Input
+                value={editClientForm.full_name || ''}
+                onChange={(e) => setEditClientForm({ ...editClientForm, full_name: e.target.value })}
               />
             </div>
 
             <div className="space-y-2">
               <Label>Phone</Label>
-              <Input 
-                value={editClientForm.phone || ''} 
-                onChange={(e) => setEditClientForm({...editClientForm, phone: e.target.value})}
+              <Input
+                value={editClientForm.phone || ''}
+                onChange={(e) => setEditClientForm({ ...editClientForm, phone: e.target.value })}
               />
             </div>
 
             <div className="space-y-2">
               <Label>Wallet Balance ($)</Label>
-              <Input 
+              <Input
                 type="number"
                 step="0.01"
-                value={editClientForm.wallet_balance || 0} 
-                onChange={(e) => setEditClientForm({...editClientForm, wallet_balance: parseFloat(e.target.value) || 0})}
+                value={editClientForm.wallet_balance || 0}
+                onChange={(e) => setEditClientForm({ ...editClientForm, wallet_balance: parseFloat(e.target.value) || 0 })}
               />
             </div>
           </div>
@@ -1283,7 +1286,7 @@ const AdminDashboard = () => {
           <div className="space-y-4 mt-4">
             <div className="space-y-2">
               <Label>Status</Label>
-              <Select value={editConsultationForm.status || ''} onValueChange={(v) => setEditConsultationForm({...editConsultationForm, status: v})}>
+              <Select value={editConsultationForm.status || ''} onValueChange={(v) => setEditConsultationForm({ ...editConsultationForm, status: v })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
@@ -1299,38 +1302,38 @@ const AdminDashboard = () => {
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Total Amount ($)</Label>
-                <Input 
+                <Input
                   type="number"
                   step="0.01"
-                  value={editConsultationForm.total_amount || 0} 
-                  onChange={(e) => setEditConsultationForm({...editConsultationForm, total_amount: parseFloat(e.target.value) || 0})}
+                  value={editConsultationForm.total_amount || 0}
+                  onChange={(e) => setEditConsultationForm({ ...editConsultationForm, total_amount: parseFloat(e.target.value) || 0 })}
                 />
               </div>
               <div className="space-y-2">
                 <Label>Commission ($)</Label>
-                <Input 
+                <Input
                   type="number"
                   step="0.01"
-                  value={editConsultationForm.commission_amount || 0} 
-                  onChange={(e) => setEditConsultationForm({...editConsultationForm, commission_amount: parseFloat(e.target.value) || 0})}
+                  value={editConsultationForm.commission_amount || 0}
+                  onChange={(e) => setEditConsultationForm({ ...editConsultationForm, commission_amount: parseFloat(e.target.value) || 0 })}
                 />
               </div>
               <div className="space-y-2">
                 <Label>Lawyer Amount ($)</Label>
-                <Input 
+                <Input
                   type="number"
                   step="0.01"
-                  value={editConsultationForm.lawyer_amount || 0} 
-                  onChange={(e) => setEditConsultationForm({...editConsultationForm, lawyer_amount: parseFloat(e.target.value) || 0})}
+                  value={editConsultationForm.lawyer_amount || 0}
+                  onChange={(e) => setEditConsultationForm({ ...editConsultationForm, lawyer_amount: parseFloat(e.target.value) || 0 })}
                 />
               </div>
             </div>
 
             <div className="space-y-2">
               <Label>Notes</Label>
-              <Textarea 
-                value={editConsultationForm.notes || ''} 
-                onChange={(e) => setEditConsultationForm({...editConsultationForm, notes: e.target.value})}
+              <Textarea
+                value={editConsultationForm.notes || ''}
+                onChange={(e) => setEditConsultationForm({ ...editConsultationForm, notes: e.target.value })}
                 rows={3}
               />
             </div>

@@ -12,14 +12,19 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  User, Mail, Phone, Save, Shield, ArrowLeft, 
-  Briefcase, GraduationCap, Clock, DollarSign, Loader2
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+
+import {
+  User, Mail, Phone, Save, Shield, ArrowLeft,
+  Briefcase, GraduationCap, Clock, DollarSign, Loader2, CalendarIcon
 } from 'lucide-react';
 import { AvatarUpload } from '@/components/profile/AvatarUpload';
 import { LawyerDocuments } from '@/components/profile/LawyerDocuments';
 import { Skeleton } from '@/components/ui/skeleton';
 import { z } from 'zod';
+import { format, parseISO } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 // Validation schemas
 const profileSchema = z.object({
@@ -31,8 +36,8 @@ const lawyerProfileSchema = z.object({
   bio: z.string().trim().max(1000, 'Bio must be less than 1000 characters').optional().nullable(),
   education: z.string().trim().max(500, 'Education must be less than 500 characters').optional().nullable(),
   experience_years: z.number().min(0, 'Experience cannot be negative').max(70, 'Invalid experience').optional().nullable(),
-  price_per_minute: z.number().min(1, 'Minimum $1/min').max(1000, 'Maximum $1000/min').optional().nullable(),
-  session_price: z.number().min(10, 'Minimum $10').max(10000, 'Maximum $10000').optional().nullable(),
+  price_per_minute: z.number().min(1, 'Minimum ₹1/min').max(1000, 'Maximum ₹1000/min').optional().nullable(),
+  session_price: z.number().min(10, 'Minimum ₹10').max(10000, 'Maximum ₹10000').optional().nullable(),
   bar_council_number: z.string().trim().max(100, 'Bar number too long').optional().nullable(),
 });
 
@@ -41,6 +46,7 @@ interface Profile {
   email: string;
   phone: string | null;
   avatar_url: string | null;
+  date_of_birth: string | null;
 }
 
 interface LawyerProfile {
@@ -66,6 +72,7 @@ const ProfileSettings = () => {
     email: '',
     phone: null,
     avatar_url: null,
+    date_of_birth: null,
   });
   const [lawyerProfile, setLawyerProfile] = useState<LawyerProfile | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -95,6 +102,7 @@ const ProfileSettings = () => {
         email: profileData.email || user.email || '',
         phone: profileData.phone,
         avatar_url: profileData.avatar_url,
+        date_of_birth: profileData.date_of_birth,
       });
     }
 
@@ -161,8 +169,10 @@ const ProfileSettings = () => {
       .update({
         full_name: profile.full_name.trim(),
         phone: profile.phone?.trim() || null,
+        date_of_birth: profile.date_of_birth || null,
         updated_at: new Date().toISOString(),
-      })
+        // })
+      } as any)
       .eq('id', user.id);
 
     if (profileError) {
@@ -216,7 +226,7 @@ const ProfileSettings = () => {
       <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background">
         <div className="container max-w-4xl mx-auto px-4 py-8">
           {/* Header */}
-          <div className="flex items-center gap-4 mb-8">
+          {/* <div className="flex items-center gap-4 mb-8">
             <Button 
               variant="ghost" 
               size="icon" 
@@ -228,20 +238,20 @@ const ProfileSettings = () => {
               <h1 className="font-serif text-3xl font-bold">Profileeeee Settings</h1>
               <p className="text-muted-foreground">Manage your personal information</p>
             </div>
-          </div>
+          </div> */}
 
-          {/* Avatar & Basic Info Card */}
+          Avatar & Basic Info Card
           <Card className="border-0 shadow-lg mb-6">
             <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2">
+              {/* <CardTitle className="flex items-center gap-2">
                 <User className="h-5 w-5" />
                 Personal Information
-              </CardTitle>
-              <CardDescription>Update your basic profile details</CardDescription>
+              </CardTitle> */}
+              {/* <CardDescription>Update your basic profile details</CardDescription> */}
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Avatar Section */}
-              <div className="flex items-center gap-6">
+              {/* <div className="flex items-center gap-6">
                 {user && (
                   <AvatarUpload
                     userId={user.id}
@@ -265,12 +275,12 @@ const ProfileSettings = () => {
                     )}
                   </div>
                 </div>
-              </div>
+              </div> */}
 
               <Separator />
 
               {/* Form Fields */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="full_name" className="flex items-center gap-2">
                     <User className="h-4 w-4 text-muted-foreground" />
@@ -314,21 +324,55 @@ const ProfileSettings = () => {
                   />
                   {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
                 </div>
+              </div> */}
+              <div className="space-y-2 md:col-span-2">
+                <Label className="flex items-center gap-2">
+                  <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                  Date of Birth
+                </Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'w-full justify-start text-left font-normal',
+                        !profile.date_of_birth && 'text-muted-foreground'
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {profile.date_of_birth ? format(parseISO(profile.date_of_birth), 'PPP') : <span>DOB</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={profile.date_of_birth ? parseISO(profile.date_of_birth) : undefined}
+                      onSelect={(date) => setProfile(prev => ({ ...prev, date_of_birth: date ? format(date, 'yyyy-MM-dd') : null }))}
+                      disabled={(date) => date > new Date() || date < new Date('1900-01-01')}
+                      initialFocus
+                      className={cn('p-3 pointer-events-auto')}
+                      captionLayout="dropdown-buttons"
+                      fromYear={1900}
+                      toYear={new Date().getFullYear()}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
+
             </CardContent>
           </Card>
 
           {/* Lawyer-specific Settings */}
           {userRole === 'lawyer' && lawyerProfile && (
             <Card className="border-0 shadow-lg mb-6">
-              <CardHeader className="pb-4">
+              {/* <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-2">
                   <Briefcase className="h-5 w-5" />
                   Professional Details
                 </CardTitle>
                 <CardDescription>Update your professional profile visible to clients</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
+              </CardHeader> */}
+              {/* <CardContent className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="bio" className="flex items-center gap-2">
                     <User className="h-4 w-4 text-muted-foreground" />
@@ -447,17 +491,17 @@ const ProfileSettings = () => {
                     </p>
                   </div>
                 )}
-              </CardContent>
+              </CardContent> */}
             </Card>
           )}
 
-           {/* Lawyer Documents */}
-          {userRole === 'lawyer' && user && (
+          {/* Lawyer Documents */}
+          {/* {userRole === 'lawyer' && user && (
             <LawyerDocuments userId={user.id} />
-          )}
+          )} */}
 
           {/* Save Button */}
-          <div className="flex justify-end gap-4">
+          {/* <div className="flex justify-end gap-4">
             <Button 
               variant="outline" 
               onClick={() => navigate(userRole === 'lawyer' ? '/lawyer/dashboard' : '/dashboard')}
@@ -477,7 +521,7 @@ const ProfileSettings = () => {
                 </>
               )}
             </Button>
-          </div>
+          </div> */}
         </div>
       </div>
     </MainLayout>

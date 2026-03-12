@@ -1,13 +1,20 @@
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { MainLayout } from '@/components/layout/MainLayout';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+// import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { Search, Filter, Users, Zap, X } from 'lucide-react';
+// import { Search, Filter, Users, Zap, X } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LawyerCard } from '@/components/lawyers/LawyerCard';
+import { ClientLayout } from '@/components/layout/ClientLayout';
+import { formatLawyerName } from '@/lib/lawyer-utils';
+import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Search, Filter, Users, X, Star, SlidersHorizontal, ChevronDown, ChevronUp, Globe, Briefcase, IndianRupee, ArrowLeft } from 'lucide-react';
 
 interface LawyerWithProfile {
   id: string;
@@ -23,38 +30,51 @@ interface LawyerWithProfile {
   status: string | null;
   full_name?: string;
   avatar_url?: string | null;
+  date_of_birth?: string | null;
 }
 
+const SPECIALIZATION_OPTIONS = [
+  'Criminal Law', 'Family Law', 'Corporate Law', 'Civil Law',
+  'Tax Law', 'Labour Law', 'Property Law', 'Constitutional Law',
+  'Cyber Law', 'Banking Law', 'Immigration Law', 'Environmental Law',
+  'Intellectual Property', 'Consumer Protection',
+];
+const LANGUAGE_OPTIONS = ['English', 'Hindi', 'Tamil', 'Telugu', 'Kannada', 'Malayalam', 'Marathi', 'Bengali', 'Gujarati', 'Punjabi'];
+
 const Lawyers = () => {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const categoryFilter = searchParams.get('category');
-  
+  const sortParam = searchParams.get('sort');
+  const filterParam = searchParams.get('filter');
+
   const [lawyers, setLawyers] = useState<LawyerWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
+  const [showFilters, setShowFilters] = useState(filterParam === 'specialization');
+  // Filter states
+  const [minRating, setMinRating] = useState(0);
+  const [minExperience, setMinExperience] = useState(0);
+  const [maxPrice, setMaxPrice] = useState(100);
+  const [selectedSpecializations, setSelectedSpecializations] = useState<string[]>([]);
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
+  const [onlineOnly, setOnlineOnly] = useState(false);
+  const [sortBy, setSortBy] = useState(sortParam || 'default');
+  useEffect(() => {
+    if (sortParam) setSortBy(sortParam);
+    if (filterParam === 'specialization') setShowFilters(true);
+  }, [sortParam, filterParam]);
+
   useEffect(() => {
     fetchLawyers();
 
-    // Set up real-time subscription for lawyer availability
     const channel = supabase
       .channel('lawyer-availability')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'lawyer_profiles',
-        },
-        () => {
-          fetchLawyers();
-        }
-      )
-      .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'lawyer_profiles' }, () => fetchLawyers())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const fetchLawyers = async () => {
@@ -72,19 +92,23 @@ const Lawyers = () => {
 
     if (lawyerData && lawyerData.length > 0) {
       const userIds = lawyerData.map(l => l.user_id);
-      
-      const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('id, full_name, avatar_url')
-        .in('id', userIds);
 
+      // const { data: profilesData } = await supabase
+      //   .from('profiles')
+      //   .select('id, full_name, avatar_url')
+      //   .in('id', userIds);
+      // const { data: profilesData } = await supabase.from('profiles').select('id, full_name, avatar_url').in('id', userIds);
+      const { data: profilesData } = await supabase.from('profiles').select('id, full_name, avatar_url, date_of_birth').in('id', userIds);
       const enrichedLawyers = lawyerData.map(lawyer => {
         const profile = profilesData?.find(p => p.id === lawyer.user_id);
-        return {
-          ...lawyer,
-          full_name: profile?.full_name || 'Legal Professional',
-          avatar_url: profile?.avatar_url,
-        };
+        // return {
+        //   ...lawyer,
+        //   // full_name: profile?.full_name || 'Legal Professional',
+        //   full_name: formatLawyerName(profile?.full_name),
+        //   avatar_url: profile?.avatar_url,
+        // };
+        // return { ...lawyer, full_name: formatLawyerName(profile?.full_name) || 'Legal Professional', avatar_url: profile?.avatar_url };
+        return { ...lawyer, full_name: profile?.full_name || 'Legal Professional', avatar_url: profile?.avatar_url, date_of_birth: profile?.date_of_birth };
       });
 
       setLawyers(enrichedLawyers as LawyerWithProfile[]);
@@ -94,45 +118,129 @@ const Lawyers = () => {
     setLoading(false);
   };
 
-  const filteredLawyers = lawyers.filter(lawyer => {
-    const specializations = lawyer.specializations?.join(' ').toLowerCase() || '';
-    const lawyerName = lawyer.full_name?.toLowerCase() || '';
-    const query = searchQuery.toLowerCase();
-    
-    const matchesSearch = !query || specializations.includes(query) || lawyerName.includes(query);
-    const matchesCategory = !categoryFilter || 
-      lawyer.specializations?.some(s => s.toLowerCase().includes(categoryFilter.toLowerCase()));
-    
-    return matchesSearch && matchesCategory;
-  });
+  // const filteredLawyers = lawyers.filter(lawyer => {
+  //   const specializations = lawyer.specializations?.join(' ').toLowerCase() || '';
+  //   const lawyerName = lawyer.full_name?.toLowerCase() || '';
+  //   const query = searchQuery.toLowerCase();
 
-  const onlineLawyers = filteredLawyers.filter(l => l.is_available);
-  const offlineLawyers = filteredLawyers.filter(l => !l.is_available);
+  //   const matchesSearch = !query || specializations.includes(query) || lawyerName.includes(query);
+  //   const matchesCategory = !categoryFilter || 
+  //     lawyer.specializations?.some(s => s.toLowerCase().includes(categoryFilter.toLowerCase()));
 
-  const clearCategoryFilter = () => {
+  //   return matchesSearch && matchesCategory;
+  // });
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (minRating > 0) count++;
+    if (minExperience > 0) count++;
+    if (maxPrice < 100) count++;
+    if (selectedSpecializations.length > 0) count++;
+    if (selectedLanguages.length > 0) count++;
+    if (onlineOnly) count++;
+    if (categoryFilter) count++;
+    return count;
+  }, [minRating, minExperience, maxPrice, selectedSpecializations, selectedLanguages, onlineOnly, categoryFilter]);
+
+  // const onlineLawyers = filteredLawyers.filter(l => l.is_available);
+  // const offlineLawyers = filteredLawyers.filter(l => !l.is_available);
+  const filteredAndSortedLawyers = useMemo(() => {
+    let result = lawyers.filter(lawyer => {
+      const specializations = lawyer.specializations?.join(' ').toLowerCase() || '';
+      const lawyerName = lawyer.full_name?.toLowerCase() || '';
+      const query = searchQuery.toLowerCase();
+
+
+      // const clearCategoryFilter = () => {
+      const matchesSearch = !query || specializations.includes(query) || lawyerName.includes(query);
+      const matchesCategory = !categoryFilter || lawyer.specializations?.some(s => s.toLowerCase().includes(categoryFilter.toLowerCase()));
+      const matchesRating = !minRating || (lawyer.rating && lawyer.rating >= minRating);
+      const matchesExperience = !minExperience || (lawyer.experience_years && lawyer.experience_years >= minExperience);
+      const matchesPrice = (lawyer.price_per_minute ?? 0) <= maxPrice;
+      const matchesOnline = !onlineOnly || lawyer.is_available;
+      const matchesSpecializations = selectedSpecializations.length === 0 ||
+        selectedSpecializations.some(s => lawyer.specializations?.some(ls => ls.toLowerCase().includes(s.toLowerCase())));
+      const matchesLanguages = selectedLanguages.length === 0 ||
+        selectedLanguages.some(l => lawyer.languages?.some(ll => ll.toLowerCase().includes(l.toLowerCase())));
+      return matchesSearch && matchesCategory && matchesRating && matchesExperience && matchesPrice && matchesOnline && matchesSpecializations && matchesLanguages;
+    });
+    // Sort
+    switch (sortBy) {
+      case 'top-rated':
+        result.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+        break;
+      case 'experience':
+        result.sort((a, b) => (b.experience_years || 0) - (a.experience_years || 0));
+        break;
+      case 'price-low':
+        result.sort((a, b) => (a.price_per_minute || 0) - (b.price_per_minute || 0));
+        break;
+      case 'price-high':
+        result.sort((a, b) => (b.price_per_minute || 0) - (a.price_per_minute || 0));
+        break;
+      case 'reviews':
+        result.sort((a, b) => (b.total_reviews || 0) - (a.total_reviews || 0));
+        break;
+      default:
+        // default: available first, then by rating
+        break;
+    }
+    return result;
+  }, [lawyers, searchQuery, categoryFilter, minRating, minExperience, maxPrice, selectedSpecializations, selectedLanguages, onlineOnly, sortBy]);
+  const onlineLawyers = filteredAndSortedLawyers.filter(l => l.is_available);
+  const offlineLawyers = filteredAndSortedLawyers.filter(l => !l.is_available);
+  const clearAllFilters = () => {
+    setSearchQuery('');
+    setMinRating(0);
+    setMinExperience(0);
+    setMaxPrice(100);
+    setSelectedSpecializations([]);
+    setSelectedLanguages([]);
+    setOnlineOnly(false);
+    setSortBy('default');
     setSearchParams({});
+  };
+  const toggleSpecialization = (spec: string) => {
+    setSelectedSpecializations(prev => prev.includes(spec) ? prev.filter(s => s !== spec) : [...prev, spec]);
+  };
+  const toggleLanguage = (lang: string) => {
+    setSelectedLanguages(prev => prev.includes(lang) ? prev.filter(l => l !== lang) : [...prev, lang]);
   };
 
   return (
-    <MainLayout>
+    // <MainLayout> 
+    <ClientLayout>
       <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background">
         {/* Header */}
         <div className="bg-card border-b border-border">
-          <div className="container mx-auto px-4 py-12">
+          {/* <div className="container mx-auto px-4 py-12"> */}
+          <div className="container mx-auto px-4 py-8 md:py-12">
             <div className="flex items-center gap-3 mb-4">
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="p-2 hover:bg-secondary rounded-lg transition-colors"
+                title="Back to dashboard"
+              >
+                <ArrowLeft className="h-6 w-6 text-foreground" />
+              </button>
               <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">
                 <Users className="h-6 w-6 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="font-serif text-4xl font-bold">Find a Lawyer</h1>
+                {/* <h1 className="font-serif text-4xl font-bold">Find a Lawyer</h1>
                 <p className="text-muted-foreground">
-                  {filteredLawyers.length} legal professionals • {onlineLawyers.length} online now
+                  {filteredLawyers.length} Lawyer are there • {onlineLawyers.length} online now */}
+                <h1 className="font-serif text-2xl md:text-4xl font-bold">
+                  {sortBy === 'top-rated' ? 'Top Rated Lawyers' : 'Find a Lawyer'}
+                </h1>
+                <p className="text-muted-foreground text-sm md:text-base">
+                  {filteredAndSortedLawyers.length} Lawyer{filteredAndSortedLawyers.length !== 1 ? 's' : ''} are there • {onlineLawyers.length} online now
                 </p>
               </div>
             </div>
-            
+
             {/* Search & Filters */}
-            <div className="flex flex-col sm:flex-row gap-4 mt-8 max-w-2xl">
+            {/* <div className="flex flex-col sm:flex-row gap-4 mt-8 max-w-2xl"> */}
+            <div className="flex flex-col sm:flex-row gap-3 mt-6 max-w-3xl">
               <div className="relative flex-1">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
@@ -142,14 +250,40 @@ const Lawyers = () => {
                   className="pl-12 h-12 text-base bg-background border-border"
                 />
               </div>
-              <Button variant="outline" size="lg" className="gap-2 h-12">
-                <Filter className="h-5 w-5" />
+              {/* <Button variant="outline" size="lg" className="gap-2 h-12">
+                <Filter className="h-5 w-5" /> */}
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-full sm:w-48 h-12">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">Default</SelectItem>
+                  <SelectItem value="top-rated">Top Rated</SelectItem>
+                  <SelectItem value="experience">Most Experienced</SelectItem>
+                  <SelectItem value="price-low">Price: Low to High</SelectItem>
+                  <SelectItem value="price-high">Price: High to Low</SelectItem>
+                  <SelectItem value="reviews">Most Reviews</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant={showFilters ? "default" : "outline"}
+                size="lg"
+                className="gap-2 h-12 shrink-0"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <SlidersHorizontal className="h-4 w-4" />
                 Filters
+                {activeFilterCount > 0 && (
+                  <Badge variant="secondary" className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-xs rounded-full">
+                    {activeFilterCount}
+                  </Badge>
+                )}
+                {showFilters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </Button>
             </div>
 
             {/* Active Filters */}
-            {categoryFilter && (
+            {/* {categoryFilter && (
               <div className="mt-4 flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">Filtering by:</span>
                 <Badge variant="secondary" className="gap-1.5 pr-1.5">
@@ -160,14 +294,146 @@ const Lawyers = () => {
                   >
                     <X className="h-3 w-3" />
                   </button>
-                </Badge>
+                </Badge> */}
+            {/* Filter Panel */}
+            {showFilters && (
+              <div className="mt-6 p-4 md:p-6 bg-background border border-border rounded-xl animate-fade-in">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-sm flex items-center gap-2">
+                    <Filter className="h-4 w-4" /> Advanced Filters
+                  </h3>
+                  {activeFilterCount > 0 && (
+                    <Button variant="ghost" size="sm" onClick={clearAllFilters} className="text-xs text-muted-foreground">
+                      Clear All
+                    </Button>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {/* Rating Filter */}
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <Star className="h-4 w-4 text-amber-500" /> Minimum Rating
+                    </Label>
+                    <div className="flex items-center gap-3">
+                      <Slider
+                        value={[minRating]}
+                        onValueChange={([val]) => setMinRating(val)}
+                        max={5}
+                        step={0.5}
+                        className="flex-1"
+                      />
+                      <span className="text-sm font-medium w-8 text-center">{minRating > 0 ? `${minRating}+` : 'Any'}</span>
+                    </div>
+                  </div>
+                  {/* Experience Filter */}
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <Briefcase className="h-4 w-4 text-blue-500" /> Min. Experience (years)
+                    </Label>
+                    <div className="flex items-center gap-3">
+                      <Slider
+                        value={[minExperience]}
+                        onValueChange={([val]) => setMinExperience(val)}
+                        max={30}
+                        step={1}
+                        className="flex-1"
+                      />
+                      <span className="text-sm font-medium w-8 text-center">{minExperience > 0 ? `${minExperience}+` : 'Any'}</span>
+                    </div>
+                  </div>
+                  {/* Price Filter */}
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <IndianRupee className="h-4 w-4 text-emerald-500" /> Max Price/min
+                    </Label>
+                    <div className="flex items-center gap-3">
+                      <Slider
+                        value={[maxPrice]}
+                        onValueChange={([val]) => setMaxPrice(val)}
+                        max={100}
+                        step={5}
+                        className="flex-1"
+                      />
+                      <span className="text-sm font-medium w-12 text-center">₹{maxPrice}</span>
+                    </div>
+                  </div>
+                  {/* Online Only Toggle */}
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">Availability</Label>
+                    <div className="flex items-center gap-3">
+                      <Switch checked={onlineOnly} onCheckedChange={setOnlineOnly} />
+                      <span className="text-sm text-muted-foreground">Online only</span>
+                    </div>
+                  </div>
+                </div>
+                {/* Specializations */}
+                <div className="mt-6 space-y-3">
+                  <Label className="text-sm font-medium">Specializations</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {SPECIALIZATION_OPTIONS.map(spec => (
+                      <Badge
+                        key={spec}
+                        variant={selectedSpecializations.includes(spec) ? "default" : "outline"}
+                        className="cursor-pointer hover:bg-primary/10 transition-colors text-xs py-1.5"
+                        onClick={() => toggleSpecialization(spec)}
+                      >
+                        {spec}
+                        {selectedSpecializations.includes(spec) && <X className="h-3 w-3 ml-1" />}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+                {/* Languages */}
+                <div className="mt-4 space-y-3">
+                  <Label className="text-sm font-medium flex items-center gap-2">
+                    <Globe className="h-4 w-4" /> Languages
+                  </Label>
+                  <div className="flex flex-wrap gap-2">
+                    {LANGUAGE_OPTIONS.map(lang => (
+                      <Badge
+                        key={lang}
+                        variant={selectedLanguages.includes(lang) ? "default" : "outline"}
+                        className="cursor-pointer hover:bg-primary/10 transition-colors text-xs py-1.5"
+                        onClick={() => toggleLanguage(lang)}
+                      >
+                        {lang}
+                        {selectedLanguages.includes(lang) && <X className="h-3 w-3 ml-1" />}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+            {/* Active Filter Badges */}
+            {(categoryFilter || activeFilterCount > 0) && !showFilters && (
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <span className="text-sm text-muted-foreground">Active:</span>
+                {categoryFilter && (
+                  <Badge variant="secondary" className="gap-1.5 pr-1.5">
+                    {categoryFilter}
+                    <button onClick={() => setSearchParams({})} className="ml-1 hover:bg-muted rounded-full p-0.5"><X className="h-3 w-3" /></button>
+                  </Badge>
+                )}
+                {sortBy !== 'default' && (
+                  <Badge variant="secondary" className="gap-1.5 pr-1.5">
+                    Sort: {sortBy.replace('-', ' ')}
+                    <button onClick={() => setSortBy('default')} className="ml-1 hover:bg-muted rounded-full p-0.5"><X className="h-3 w-3" /></button>
+                  </Badge>
+                )}
+                {minRating > 0 && <Badge variant="secondary">Rating: {minRating}+</Badge>}
+                {minExperience > 0 && <Badge variant="secondary">Exp: {minExperience}+ yrs</Badge>}
+                {onlineOnly && <Badge variant="secondary">Online only</Badge>}
+                {selectedSpecializations.length > 0 && <Badge variant="secondary">{selectedSpecializations.length} specializations</Badge>}
+                {selectedLanguages.length > 0 && <Badge variant="secondary">{selectedLanguages.length} languages</Badge>}
+                <Button variant="ghost" size="sm" className="text-xs h-7" onClick={clearAllFilters}>Clear all</Button>
               </div>
             )}
           </div>
         </div>
 
         {/* Lawyers Grid */}
-        <div className="container mx-auto px-4 py-12">
+        {/* <div className="container mx-auto px-4 py-12"> */}
+        <div className="container mx-auto px-4 py-8 md:py-12">
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[...Array(6)].map((_, i) => (
@@ -190,13 +456,14 @@ const Lawyers = () => {
                 </div>
               ))}
             </div>
-          ) : filteredLawyers.length === 0 ? (
+            // ) : filteredLawyers.length === 0 ? (
+          ) : filteredAndSortedLawyers.length === 0 ? (
             <div className="text-center py-20">
               <div className="w-20 h-20 rounded-full bg-secondary mx-auto mb-6 flex items-center justify-center">
                 <Users className="h-10 w-10 text-muted-foreground" />
               </div>
               <h2 className="text-2xl font-semibold mb-2">No Lawyers Found</h2>
-              <p className="text-muted-foreground mb-6">
+              {/* <p className="text-muted-foreground mb-6">
                 Try adjusting your search or filters to find legal professionals
               </p>
               <Button 
@@ -207,7 +474,9 @@ const Lawyers = () => {
                 }}
               >
                 Clear All Filters
-              </Button>
+              </Button> */}
+              <p className="text-muted-foreground mb-6">Try adjusting your search or filters to find legal professionals</p>
+              <Button variant="outline" onClick={clearAllFilters}>Clear All Filters</Button>
             </div>
           ) : (
             <>
@@ -222,14 +491,16 @@ const Lawyers = () => {
                       </span>
                       <span className="font-medium text-sm">Available Now</span>
                     </div>
-                    <span className="text-muted-foreground text-sm">
+                    {/* <span className="text-muted-foreground text-sm">
                       {onlineLawyers.length} lawyer{onlineLawyers.length !== 1 ? 's' : ''} online
-                    </span>
+                    </span> */}
+                    <span className="text-muted-foreground text-sm">{onlineLawyers.length} lawyer{onlineLawyers.length !== 1 ? 's' : ''} online</span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {onlineLawyers.map((lawyer) => (
+                    {/* {onlineLawyers.map((lawyer) => (
                       <LawyerCard key={lawyer.id} lawyer={lawyer} />
-                    ))}
+                    ))} */}
+                    {onlineLawyers.map((lawyer) => <LawyerCard key={lawyer.id} lawyer={lawyer} />)}
                   </div>
                 </div>
               )}
@@ -243,15 +514,17 @@ const Lawyers = () => {
                         <span className="w-2.5 h-2.5 rounded-full bg-muted-foreground"></span>
                         <span className="font-medium text-sm text-muted-foreground">Currently Offline</span>
                       </div>
-                      <span className="text-muted-foreground text-sm">
+                      {/* <span className="text-muted-foreground text-sm">
                         {offlineLawyers.length} lawyer{offlineLawyers.length !== 1 ? 's' : ''}
-                      </span>
+                      </span> */}
+                      <span className="text-muted-foreground text-sm">{offlineLawyers.length} lawyer{offlineLawyers.length !== 1 ? 's' : ''}</span>
                     </div>
                   )}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {offlineLawyers.map((lawyer) => (
+                    {/* {offlineLawyers.map((lawyer) => (
                       <LawyerCard key={lawyer.id} lawyer={lawyer} />
-                    ))}
+                    ))} */}
+                    {offlineLawyers.map((lawyer) => <LawyerCard key={lawyer.id} lawyer={lawyer} />)}
                   </div>
                 </div>
               )}
@@ -259,7 +532,8 @@ const Lawyers = () => {
           )}
         </div>
       </div>
-    </MainLayout>
+      {/* </MainLayout> */}
+    </ClientLayout>
   );
 };
 

@@ -17,6 +17,7 @@ import {
   Gavel,
   ArrowRight
 } from 'lucide-react';
+import { ClientLayout } from '@/components/layout/ClientLayout';
 const categories = [
   {
     icon: Users,
@@ -106,7 +107,8 @@ const categories = [
 const Categories = () => {
   const navigate = useNavigate();
   return (
-    <MainLayout>
+    // <MainLayout>
+    <ClientLayout>
       {/* Hero Section */}
       <section className="hero-gradient py-20">
         <div className="container mx-auto px-4 text-center">
@@ -194,7 +196,8 @@ const Categories = () => {
           </Button>
         </div>
       </section>
-    </MainLayout>
+    {/* </MainLayout> */}
+    </ClientLayout>
   );
 };
 export default Categories;

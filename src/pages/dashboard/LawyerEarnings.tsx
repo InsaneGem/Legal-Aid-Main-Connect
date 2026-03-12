@@ -37,7 +37,7 @@ const LawyerEarnings = () => {
   };
   if (authLoading || loading) {
     return (
-        <LawyerLayout>
+      <LawyerLayout>
         <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background">
           <div className="container mx-auto px-4 py-8">
             <Skeleton className="h-10 w-48 mb-6" />
@@ -49,7 +49,7 @@ const LawyerEarnings = () => {
     );
   }
   return (
-      <LawyerLayout>
+    <LawyerLayout>
       <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background">
         <div className="container mx-auto px-4 py-8">
           <Button variant="ghost" className="gap-2 mb-6" onClick={() => navigate('/lawyer/dashboard')}>
@@ -58,7 +58,7 @@ const LawyerEarnings = () => {
           <Card className="border-0 shadow-lg bg-gradient-to-br from-primary to-accent mb-8">
             <CardContent className="p-8 text-primary-foreground">
               <p className="text-sm opacity-80 font-medium">Total Earnings</p>
-              <p className="text-5xl font-bold mt-2">${walletBalance.toFixed(2)}</p>
+              <p className="text-5xl font-bold mt-2">₹{walletBalance.toFixed(2)}</p>
               <p className="text-sm opacity-70 mt-3 flex items-center gap-1">
                 <TrendingUp className="h-4 w-4" /> Available for withdrawal
               </p>

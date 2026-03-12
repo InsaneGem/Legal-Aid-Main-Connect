@@ -8,10 +8,11 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
-  Send, Phone, Video, Clock, ArrowLeft, 
+import { RatingDialog } from '@/components/consultation/RatingDialog';
+import {
+  Send, Phone, Video, Clock, ArrowLeft,
   Loader2, PhoneOff, VideoOff, MessageSquare,
-  User, Shield, DollarSign, CheckCircle, 
+  User, Shield, DollarSign, CheckCircle,
   MoreVertical, Paperclip, Smile, Mic
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -50,7 +51,7 @@ const Consultation = () => {
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  
+
   const [consultation, setConsultation] = useState<ConsultationDetails | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -61,6 +62,7 @@ const Consultation = () => {
   const [isAudioCallActive, setIsAudioCallActive] = useState(false);
   const [participant, setParticipant] = useState<ParticipantInfo | null>(null);
   const [isTyping, setIsTyping] = useState(false);
+  const [showRatingDialog, setShowRatingDialog] = useState(false);
 
   const isLawyer = consultation?.lawyer_id === user?.id;
 
@@ -105,7 +107,7 @@ const Consultation = () => {
       navigate('/dashboard');
     } else {
       setConsultation(data);
-      
+
       // Fetch participant info
       const otherUserId = data.client_id === user?.id ? data.lawyer_id : data.client_id;
       const { data: profile } = await supabase
@@ -113,7 +115,7 @@ const Consultation = () => {
         .select('id, full_name, avatar_url')
         .eq('id', otherUserId)
         .single();
-      
+
       if (profile) {
         setParticipant({
           ...profile,
@@ -189,15 +191,15 @@ const Consultation = () => {
   const startConsultation = async () => {
     const { error } = await supabase
       .from('consultations')
-      .update({ 
+      .update({
         status: 'active',
         started_at: new Date().toISOString(),
       })
       .eq('id', id);
 
     if (!error) {
-      setConsultation(prev => prev ? { 
-        ...prev, 
+      setConsultation(prev => prev ? {
+        ...prev,
         status: 'active',
         started_at: new Date().toISOString(),
       } : null);
@@ -211,7 +213,7 @@ const Consultation = () => {
   const endConsultation = async () => {
     const { error } = await supabase
       .from('consultations')
-      .update({ 
+      .update({
         status: 'completed',
         ended_at: new Date().toISOString(),
         duration_minutes: Math.ceil(elapsedTime / 60),
@@ -219,11 +221,17 @@ const Consultation = () => {
       .eq('id', id);
 
     if (!error) {
+      setConsultation(prev => prev ? { ...prev, status: 'completed' } : null);
       toast({
         title: 'Consultation ended',
         description: 'Thank you for using LEGALMATE.',
       });
-      navigate(isLawyer ? '/lawyer/dashboard' : '/dashboard');
+      // navigate(isLawyer ? '/lawyer/dashboard' : '/dashboard');
+      if (isLawyer) {
+        navigate('/lawyer/dashboard');
+      } else {
+        setShowRatingDialog(true);
+      }
     }
   };
 
@@ -274,21 +282,21 @@ const Consultation = () => {
   if (loading) {
     return (
       // <MainLayout showFooter={false}>
-        <LawyerLayout>
+      <LawyerLayout>
         <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-background to-secondary/20">
           <div className="text-center">
             <Loader2 className="h-10 w-10 animate-spin mx-auto text-primary" />
             <p className="mt-4 text-muted-foreground">Loading consultation...</p>
           </div>
         </div>
-      {/* </MainLayout> */}
+        {/* </MainLayout> */}
       </LawyerLayout>
     );
   }
 
   return (
     // <MainLayout showFooter={false}>
-      <LawyerLayout>
+    <LawyerLayout>
       <div className="h-[calc(100vh-64px)] flex bg-gradient-to-br from-background via-background to-secondary/10">
         {/* Sidebar - Participant Info */}
         <div className="hidden lg:flex w-80 border-r border-border flex-col bg-card/50">
@@ -329,7 +337,7 @@ const Consultation = () => {
                 {consultation?.type}
               </Badge>
             </div>
-            
+
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Status</span>
               {getStatusBadge()}
@@ -351,7 +359,7 @@ const Consultation = () => {
                   <span className="text-sm font-medium">Session Fee</span>
                 </div>
                 <span className="font-semibold text-emerald-600">
-                  ${consultation.total_amount.toFixed(2)}
+                  ₹{consultation.total_amount.toFixed(2)}
                 </span>
               </div>
             )}
@@ -365,12 +373,12 @@ const Consultation = () => {
                 Start Consultation
               </Button>
             )}
-            
+
             {consultation?.status === 'active' && (
               <div className="space-y-2">
                 {(consultation.type === 'audio' || consultation.type === 'video') && (
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="w-full gap-2"
                     onClick={() => setIsAudioCallActive(true)}
                   >
@@ -379,8 +387,8 @@ const Consultation = () => {
                   </Button>
                 )}
                 {consultation.type === 'video' && (
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="w-full gap-2"
                     onClick={() => setIsVideoCallActive(true)}
                   >
@@ -388,8 +396,8 @@ const Consultation = () => {
                     Start Video Call
                   </Button>
                 )}
-                <Button 
-                  variant="destructive" 
+                <Button
+                  variant="destructive"
                   className="w-full gap-2"
                   onClick={endConsultation}
                 >
@@ -408,7 +416,7 @@ const Consultation = () => {
               <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="lg:hidden">
                 <ArrowLeft className="h-5 w-5" />
               </Button>
-              
+
               {/* Mobile: Show participant info */}
               <div className="flex items-center gap-3 lg:hidden">
                 <Avatar className="h-10 w-10">
@@ -443,8 +451,8 @@ const Consultation = () => {
               {consultation?.status === 'active' && (
                 <>
                   {(consultation.type === 'audio' || consultation.type === 'video') && (
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="icon"
                       onClick={() => setIsAudioCallActive(true)}
                       className="hover:bg-blue-500/10 hover:text-blue-600 hover:border-blue-500/30"
@@ -453,8 +461,8 @@ const Consultation = () => {
                     </Button>
                   )}
                   {consultation.type === 'video' && (
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="icon"
                       onClick={() => setIsVideoCallActive(true)}
                       className="hover:bg-purple-500/10 hover:text-purple-600 hover:border-purple-500/30"
@@ -490,7 +498,7 @@ const Consultation = () => {
                   </div>
                   <h3 className="text-xl font-semibold mb-2">Waiting to Start</h3>
                   <p className="text-muted-foreground max-w-sm mx-auto">
-                    {isLawyer 
+                    {isLawyer
                       ? 'Click "Start Consultation" to begin the session with your client.'
                       : 'Your lawyer will start the consultation shortly.'}
                   </p>
@@ -516,9 +524,9 @@ const Consultation = () => {
               {messages.map((message, index) => {
                 const isOwn = message.sender_id === user?.id;
                 const showAvatar = index === 0 || messages[index - 1]?.sender_id !== message.sender_id;
-                
+
                 return (
-                  <div 
+                  <div
                     key={message.id}
                     className={`flex gap-3 ${isOwn ? 'flex-row-reverse' : ''}`}
                   >
@@ -532,26 +540,25 @@ const Consultation = () => {
                     ) : (
                       <div className="w-8" />
                     )}
-                    
+
                     <div className={`max-w-[70%] ${isOwn ? 'items-end' : 'items-start'}`}>
-                      <div className={`px-4 py-3 rounded-2xl ${
-                        isOwn 
-                          ? 'bg-primary text-primary-foreground rounded-br-md' 
-                          : 'bg-card border border-border rounded-bl-md'
-                      }`}>
+                      <div className={`px-4 py-3 rounded-2xl ${isOwn
+                        ? 'bg-primary text-primary-foreground rounded-br-md'
+                        : 'bg-card border border-border rounded-bl-md'
+                        }`}>
                         <p className="text-sm leading-relaxed">{message.content}</p>
                       </div>
                       <p className={`text-xs text-muted-foreground mt-1 px-1 ${isOwn ? 'text-right' : ''}`}>
-                        {new Date(message.created_at).toLocaleTimeString([], { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
+                        {new Date(message.created_at).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit'
                         })}
                       </p>
                     </div>
                   </div>
                 );
               })}
-              
+
               <div ref={messagesEndRef} />
             </div>
           </div>
@@ -564,7 +571,7 @@ const Consultation = () => {
                   <Button type="button" variant="ghost" size="icon" className="flex-shrink-0">
                     <Paperclip className="h-5 w-5 text-muted-foreground" />
                   </Button>
-                  
+
                   <Input
                     ref={inputRef}
                     placeholder="Type your message..."
@@ -573,13 +580,13 @@ const Consultation = () => {
                     className="flex-1 border-0 bg-transparent focus-visible:ring-0 text-base"
                     disabled={sending}
                   />
-                  
+
                   <Button type="button" variant="ghost" size="icon" className="flex-shrink-0">
                     <Smile className="h-5 w-5 text-muted-foreground" />
                   </Button>
-                  
-                  <Button 
-                    type="submit" 
+
+                  <Button
+                    type="submit"
                     size="icon"
                     disabled={sending || !newMessage.trim()}
                     className="flex-shrink-0 rounded-lg"
@@ -606,22 +613,33 @@ const Consultation = () => {
         </div>
 
         {/* Video Call Component */}
-        <VideoCall 
-          isActive={isVideoCallActive} 
+        <VideoCall
+          isActive={isVideoCallActive}
           onEnd={() => setIsVideoCallActive(false)}
           participantName={participant?.full_name || 'Participant'}
           consultationId={id || ''}
         />
 
         {/* Audio Call Component */}
-        <AudioCall 
-          isActive={isAudioCallActive} 
+        <AudioCall
+          isActive={isAudioCallActive}
           onEnd={() => setIsAudioCallActive(false)}
           participantName={participant?.full_name || 'Participant'}
           consultationId={id || ''}
         />
+        {consultation && user && !isLawyer && (
+          <RatingDialog
+            open={showRatingDialog}
+            onOpenChange={setShowRatingDialog}
+            consultationId={consultation.id}
+            lawyerId={consultation.lawyer_id}
+            clientId={user.id}
+            lawyerName={participant?.full_name || 'Lawyer'}
+            lawyerAvatar={participant?.avatar_url}
+          />
+        )}
       </div>
-    {/* </MainLayout> */}
+      {/* </MainLayout> */}
     </LawyerLayout>
   );
 };
