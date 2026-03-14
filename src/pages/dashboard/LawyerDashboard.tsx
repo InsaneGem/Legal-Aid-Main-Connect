@@ -27,7 +27,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { OnboardingAlert } from '@/components/dashboard/OnboardingAlert';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import Consultation from '../Consultation';
+// import Consultation from '../Consultation';
 
 
 
@@ -51,10 +51,10 @@ interface ConsultationWithClient {
   payment_status?: string | null;
 
 }
-interface IncomingBooking {
-  consultation: ConsultationWithClient;
-  countdown: number;
-}
+// interface IncomingBooking {
+//   consultation: ConsultationWithClient;
+//   countdown: number;
+// }
 const LawyerDashboard = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -83,47 +83,47 @@ const LawyerDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   // Real-time incoming booking notification
-  const [incomingBooking, setIncomingBooking] = useState<IncomingBooking | null>(null);
-  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  // Countdown for incoming booking
-  useEffect(() => {
-    if (!incomingBooking) return;
-    if (incomingBooking.countdown <= 0) {
-      // Time expired - auto-dismiss
-      clearInterval(countdownRef.current!);
-      setIncomingBooking(null);
-      toast({
-        title: '⏰ Request Expired',
-        description: 'You did not respond in time. The request has been auto-cancelled.',
-      });
-      return;
-    }
-  }, [incomingBooking?.countdown]);
-  const startCountdown = (consultation: ConsultationWithClient) => {
-    if (countdownRef.current) clearInterval(countdownRef.current);
+  // const [incomingBooking, setIncomingBooking] = useState<IncomingBooking | null>(null);
+  // const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // // Countdown for incoming booking
+  // useEffect(() => {
+  //   if (!incomingBooking) return;
+  //   if (incomingBooking.countdown <= 0) {
+  //     // Time expired - auto-dismiss
+  //     clearInterval(countdownRef.current!);
+  //     setIncomingBooking(null);
+  //     toast({
+  //       title: '⏰ Request Expired',
+  //       description: 'You did not respond in time. The request has been auto-cancelled.',
+  //     });
+  //     return;
+  //   }
+  // }, [incomingBooking?.countdown]);
+  // const startCountdown = (consultation: ConsultationWithClient) => {
+  //   if (countdownRef.current) clearInterval(countdownRef.current);
 
-    setIncomingBooking({ consultation, countdown: 60 });
+  //   setIncomingBooking({ consultation, countdown: 60 });
 
-    countdownRef.current = setInterval(() => {
-      setIncomingBooking(prev => {
-        if (!prev || prev.countdown <= 1) {
-          clearInterval(countdownRef.current!);
-          return null;
-        }
-        return { ...prev, countdown: prev.countdown - 1 };
-      });
-    }, 1000);
-    // Play notification sound
-    try {
-      if (Notification.permission === 'granted') {
-        new Notification('🔔 New Consultation Request!', {
-          body: `${consultation.client_name} wants a ${consultation.type} consultation`,
-          icon: '/favicon.svg',
-          tag: 'new-booking',
-        });
-      }
-    } catch (e) { }
-  };
+  //   countdownRef.current = setInterval(() => {
+  //     setIncomingBooking(prev => {
+  //       if (!prev || prev.countdown <= 1) {
+  //         clearInterval(countdownRef.current!);
+  //         return null;
+  //       }
+  //       return { ...prev, countdown: prev.countdown - 1 };
+  //     });
+  //   }, 1000);
+  //   // Play notification sound
+  //   try {
+  //     if (Notification.permission === 'granted') {
+  //       new Notification('🔔 New Consultation Request!', {
+  //         body: `${consultation.client_name} wants a ${consultation.type} consultation`,
+  //         icon: '/favicon.svg',
+  //         tag: 'new-booking',
+  //       });
+  //     }
+  //   } catch (e) { }
+  // };
 
 
   // Calculate profile completion
@@ -156,9 +156,9 @@ const LawyerDashboard = () => {
       fetchDashboardData();
 
       // Request notification permission
-      if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
-        Notification.requestPermission();
-      }
+      // if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      //   Notification.requestPermission();
+      // }
 
       // Set up realtime subscription for lawyer's consultations
       const channel = supabase
@@ -166,36 +166,37 @@ const LawyerDashboard = () => {
         .on(
           'postgres_changes',
           {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'consultations',
-            filter: `lawyer_id=eq.${user.id}`,
-          },
-          async (payload) => {
-            const newConsultation = payload.new as any;
-            if (newConsultation.status === 'pending') {
-              // Fetch client info
-              const { data: clientProfile } = await supabase
-                .from('profiles')
-                .select('full_name, email, phone, avatar_url')
-                .eq('id', newConsultation.client_id)
-                .single();
-              const enriched: ConsultationWithClient = {
-                ...newConsultation,
-                client_name: clientProfile?.full_name || 'Client',
-                client_email: clientProfile?.email || '',
-                client_phone: clientProfile?.phone || '',
-                client_avatar: clientProfile?.avatar_url,
-              };
-              startCountdown(enriched);
-              fetchDashboardData();
-            }
-          }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
+            //     event: 'INSERT',
+            //     schema: 'public',
+            //     table: 'consultations',
+            //     filter: `lawyer_id=eq.${user.id}`,
+            //   },
+            //   async (payload) => {
+            //     const newConsultation = payload.new as any;
+            //     if (newConsultation.status === 'pending') {
+            //       // Fetch client info
+            //       const { data: clientProfile } = await supabase
+            //         .from('profiles')
+            //         .select('full_name, email, phone, avatar_url')
+            //         .eq('id', newConsultation.client_id)
+            //         .single();
+            //       const enriched: ConsultationWithClient = {
+            //         ...newConsultation,
+            //         client_name: clientProfile?.full_name || 'Client',
+            //         client_email: clientProfile?.email || '',
+            //         client_phone: clientProfile?.phone || '',
+            //         client_avatar: clientProfile?.avatar_url,
+            //       };
+            //       startCountdown(enriched);
+            //       fetchDashboardData();
+            //     }
+            //   }
+            // )
+            // .on(
+            //   'postgres_changes',
+            //   {
+            //     event: 'UPDATE',
+            event: '*',
             schema: 'public',
             table: 'consultations',
             filter: `lawyer_id=eq.${user.id}`,
@@ -203,7 +204,7 @@ const LawyerDashboard = () => {
           (payload) => {
             const updated = payload.new as any;
             // If payment completed, notify lawyer
-            if (updated.payment_status === 'paid' && updated.status === 'active') {
+            if (updated?.payment_status === 'paid' && updated?.status === 'active') {
               toast({
                 title: '💰 Payment Received!',
                 description: 'The client has completed payment. Consultation is now unlocked.',
@@ -355,9 +356,8 @@ const LawyerDashboard = () => {
       });
 
       // Dismiss incoming booking dialog if it matches
-      if (incomingBooking?.consultation.id === consultationId) {
-        if (countdownRef.current) clearInterval(countdownRef.current);
-        setIncomingBooking(null);
+      if (action === 'accept') {
+        navigate(`/consultation/${consultationId}`);
       }
 
       // if (action === 'accept') {
@@ -406,104 +406,7 @@ const LawyerDashboard = () => {
     return (
       <LawyerLayout>
         {/* ──── Incoming Booking Real-Time Dialog ──── */}
-        <Dialog open={!!incomingBooking} onOpenChange={() => { }}>
-          <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Bell className="h-5 w-5 text-primary animate-bounce" />
-                New Consultation Request!
-              </DialogTitle>
-              <DialogDescription>
-                Respond within the time limit
-              </DialogDescription>
-            </DialogHeader>
-            {incomingBooking && (
-              <div className="space-y-5">
-                {/* Countdown */}
-                <div className="flex justify-center">
-                  <div className="relative w-20 h-20">
-                    <svg className="w-20 h-20 -rotate-90" viewBox="0 0 100 100">
-                      <circle cx="50" cy="50" r="45" fill="none" stroke="hsl(var(--muted))" strokeWidth="6" />
-                      <circle
-                        cx="50" cy="50" r="45" fill="none"
-                        stroke={incomingBooking.countdown <= 10 ? 'hsl(0 84% 60%)' : 'hsl(var(--primary))'}
-                        strokeWidth="6" strokeLinecap="round"
-                        strokeDasharray={`${2 * Math.PI * 45}`}
-                        strokeDashoffset={`${2 * Math.PI * 45 * (1 - incomingBooking.countdown / 60)}`}
-                        className="transition-all duration-1000 ease-linear"
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className={`text-2xl font-bold ${incomingBooking.countdown <= 10 ? 'text-red-500' : ''}`}>
-                        {incomingBooking.countdown}s
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                {/* Client Info */}
-                <div className="flex items-center gap-4 p-3 bg-secondary/30 rounded-xl border">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center overflow-hidden">
-                    {incomingBooking.consultation.client_avatar ? (
-                      <img src={incomingBooking.consultation.client_avatar} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <User className="h-6 w-6 text-primary" />
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold">{incomingBooking.consultation.client_name}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge className={getTypeColor(incomingBooking.consultation.type)}>
-                        {getTypeIcon(incomingBooking.consultation.type)}
-                        <span className="ml-1 capitalize">{incomingBooking.consultation.type}</span>
-                      </Badge>
-                      {incomingBooking.consultation.total_amount && (
-                        <span className="text-sm font-medium text-primary">
-                          ₹{incomingBooking.consultation.total_amount}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                {/* Agenda Details */}
-                {incomingBooking.consultation.agenda && (() => {
-                  const { category, urgency, details } = parseAgenda(incomingBooking.consultation.agenda);
-                  return (
-                    <div className="space-y-2 p-3 bg-secondary/20 rounded-lg border">
-                      <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                        <FileText className="h-3 w-3" /> Consultation Agenda
-                      </p>
-                      {category && (
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-xs">{category}</Badge>
-                          {urgency && <Badge variant="outline" className="text-xs">{urgency}</Badge>}
-                        </div>
-                      )}
-                      <p className="text-sm">{details}</p>
-                    </div>
-                  );
-                })()}
-                {/* Actions */}
-                <div className="flex gap-3">
-                  <Button
-                    variant="outline"
-                    className="flex-1 gap-1.5 hover:bg-red-500/10 hover:text-red-600 hover:border-red-500/30"
-                    onClick={() => handleConsultation(incomingBooking.consultation.id, 'reject')}
-                  >
-                    <XCircle className="h-4 w-4" />
-                    Decline
-                  </Button>
-                  <Button
-                    className="flex-1 gap-1.5"
-                    onClick={() => handleConsultation(incomingBooking.consultation.id, 'accept')}
-                  >
-                    <CheckCircle className="h-4 w-4" />
-                    Accept
-                  </Button>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
+
 
         <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background">
           <div className="container mx-auto px-4 py-8">
@@ -815,7 +718,7 @@ const LawyerDashboard = () => {
 
                   <div className="min-w-0 space-y-1">
                     <p className="text-xs sm:text-sm text-muted-foreground font-medium">
-                      Pending Requests
+                      Pending Requestssss
                     </p>
 
                     <p className="text-2xl sm:text-3xl font-bold">
@@ -936,12 +839,12 @@ const LawyerDashboard = () => {
           )}
 
           {/* Pending Consultations */}
-          {pendingConsultations.length > 0 && (
+          {/* {pendingConsultations.length > 0 && (
             <Card className="mb-8 border-2 border-amber-500/30 bg-amber-500/5 shadow-lg">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-3 text-xl">
                   <Zap className="h-5 w-5 text-amber-500" />
-                  Pending Requests
+                  Pending Requestsssssss
                 </CardTitle>
                 <CardDescription>Clients waiting for your response</CardDescription>
               </CardHeader>
@@ -1011,35 +914,16 @@ const LawyerDashboard = () => {
                               Accept
                             </Button>
                           </div>
-                          {/* </div>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="gap-1.5 hover:bg-red-500/10 hover:text-red-600 hover:border-red-500/30"
-                            onClick={() => handleConsultation(c.id, 'reject')}
-                          >
-                            <XCircle className="h-4 w-4" />
-                            Decline
-                          </Button>
-                          <Button
-                            size="sm"
-                            className="gap-1.5"
-                            onClick={() => handleConsultation(c.id, 'accept')}
-                          >
-                            <CheckCircle className="h-4 w-4" />
-                            Accept
-                          </Button> */}
+
                         </div>
                       </div>
-                      //   </div>
-                      // ))}
+                      
                     );
                   })}
                 </div>
               </CardContent>
             </Card>
-          )}
+          )} */}
 
           {/* My Clients Section */}
           {uniqueClients.length > 0 && (

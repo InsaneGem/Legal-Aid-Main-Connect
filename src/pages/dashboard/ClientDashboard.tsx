@@ -458,68 +458,67 @@ const ClientDashboard = () => {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-10">
 
             {/* Wallet Balance */}
-            {/* Wallet Balance */}
-            <Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-primary to-accent">
+            <Card
+              onClick={() => navigate("/dashboard/transactions")}
+              className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-primary to-accent">
               <div className="absolute inset-0 bg-gradient-to-br from-primary/90 to-accent opacity-90" />
-              <CardContent className="relative p-6 text-primary-foreground">
+              <CardContent className="relative p-3 sm:p-5 text-primary-foreground h-full flex flex-col justify-between">
                 <div className="flex items-start justify-between">
-                  <div>
+                  <div className="space-y-1">
                     <p className="text-sm opacity-80 font-medium">Transactions</p>
-                    <p className="text-xs opacity-70 mt-2">Your payment history</p>
+                    <p className="text-xs opacity-70">Your payment history</p>
                   </div>
-                  <ArrowRight className="h-3.5 w-3.5" />
+                  <ArrowRight className="h-4 w-4 shrink-0" />
                 </div>
               </CardContent>
             </Card>
 
-
-
-
-
-
-            {/* Wallet Transactions */}
-
-
             {/* Active Sessions */}
-            <Card onClick={() => navigate("#")}
-              className="group border-0 shadow-md hover:shadow-lg transition-all duration-300 bg-card">
-              <CardContent className="p-4 sm:p-5">
-                <div className="flex items-center justify-between gap-2">
+            <Card
+              onClick={() => navigate('/dashboard/active-sessions')}
+              className="group border-0 shadow-md hover:shadow-lg transition-all duration-300 bg-card"
+            >
+              <CardContent className="p-3 sm:p-5">
+                <div className="flex items-start justify-between gap-2">
 
+                  <div className="flex-1 space-y-1">
 
-                  <div className="min-w-0 space-y-1">
-                    <div className='flex items-center justify-between gap-2'>
-                      <p className="text-xs sm:text-sm font-bold whitespace-nowrap">
-                        Active Sessions
-                      </p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium whitespace-nowrap">
 
-                      <p className="text-2xl sm:text-3xl font-bold">
+                        {activeConsultations.length > 0 && (
+                          <span className="relative flex h-2.5 w-2.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                          </span>
+                        )}
+
+                        <span>Active Session</span>
+                      </div>
+
+                      <span className="text-xl sm:text-3xl font-bold leading-none">
                         {activeConsultations.length}
-                      </p>
+                      </span>
                     </div>
 
-                    {/* Existing row */}
-                    <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1 ">
-                      <Zap className="h-2.5 w-2.5 text-amber-500 " />
-
+                    <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1">
+                      <Zap className="h-3 w-3 text-amber-500" />
                       In progress now
-
-                    </p>
-
-                    {/* Added compact info rows */}
-                    <p className="text-[10px] text-muted-foreground">
-                      Lawyers currently assisting clients
                     </p>
 
                     <p className="text-[10px] text-muted-foreground">
-                      Real-time session tracking
+                      • Lawyers currently assisting clients
+                    </p>
+
+                    <p className="text-[10px] text-muted-foreground whitespace-nowrap">
+                      • Real-time session tracking
                     </p>
 
                   </div>
 
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
-                    <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
-                  </div>
+                  {/* <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
+                    <Clock className="h-4 w-4 sm:h-6 sm:w-6 text-blue-600" />
+                  </div> */}
 
                 </div>
               </CardContent>
@@ -528,150 +527,191 @@ const ClientDashboard = () => {
             {/* Total Consultations */}
             <Card
               onClick={() => navigate("/consultation-history")}
-              className="group border-0 shadow-md hover:shadow-lg transition-all duration-300 bg-card">
+              className="group border-0 shadow-md hover:shadow-lg transition-all duration-300 bg-card"
+            >
               <CardContent className="p-3 sm:p-5">
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex items-start justify-between gap-2">
 
-                  <div className="min-w-0 space-y-1">
+                  <div className="flex-1 space-y-1">
 
-                    <div className='flex items-center justify-between gap-2'>
-                      <p className="text-xs sm:text-sm font-bold whitespace-nowrap">
-                        Total Consultations
-                      </p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium whitespace-nowrap">
+                        <span>Total Consultations</span>
+                      </div>
 
-                      <p className="text-2xl sm:text-3xl font-bold">
-                        {consultations.length}
-                      </p>
+                      <span className="text-xl sm:text-3xl font-bold leading-none">
+                        {activeConsultations.length}
+                      </span>
                     </div>
 
-
-                    {/* Existing row */}
                     <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1">
-                      <TrendingUp className="h-2.5 w-2.5 text-emerald-500" />
+                      <TrendingUp className="h-3 w-3 text-emerald-500" />
                       All time
                     </p>
 
-                    {/* Added compact info rows */}
                     <p className="text-[10px] text-muted-foreground">
-                      Includes completed & active sessions
+                      • Includes completed & active sessions
                     </p>
 
-                    <p className="text-[10px] text-muted-foreground">
-                      Last updated just now
+                    <p className="text-[10px] text-muted-foreground whitespace-nowrap">
+                      • Last updated just now
                     </p>
+
                   </div>
 
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
-                    <MessageSquare className="h-5 w-5 sm:h-6 sm:w-6 text-emerald-600" />
-                  </div>
+                  {/* <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
+                    <MessageSquare className="h-4 w-4 sm:h-6 sm:w-6 text-emerald-600" />
+                  </div> */}
 
                 </div>
               </CardContent>
             </Card>
 
             {/* Available Lawyers */}
-            <Card onClick={() => navigate("/lawyers")}
-              className="group border-0 shadow-md hover:shadow-lg transition-all duration-300 bg-card">
-              <CardContent className="p-4 sm:p-5">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0 space-y-1">
-                    <div className='flex items-center justify-between gap-2'>
-                      <p className="text-xs sm:text-sm font-bold whitespace-nowrap">
-                        Available Lawyers
-                      </p>
+            <Card
+              onClick={() => navigate("/lawyers")}
+              className="group border-0 shadow-md hover:shadow-lg transition-all duration-300 bg-card"
+            >
+              <CardContent className="p-3 sm:p-5">
+                <div className="flex items-start justify-between gap-2">
 
-                      <p className="text-2xl sm:text-3xl font-bold">
+                  <div className="flex-1 space-y-1">
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium whitespace-nowrap">
+                        <span>Available Lawyers</span>
+                      </div>
+
+                      <span className="text-xl sm:text-3xl font-bold leading-none">
                         {onlineLawyers.length}
-                      </p>
+                      </span>
                     </div>
-                    {/* Existing row */}
+
                     <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1">
-                      <Users className="h-2.5 w-2.5 text-emerald-500" />
+                      <Users className="h-3 w-3 text-emerald-500" />
                       Online now
                     </p>
-                    {/* Added compact info */}
-                    <p className="text-[10px] text-muted-foreground">
-                      Verified • 24/7 Support
-                    </p>
 
                     <p className="text-[10px] text-muted-foreground">
-                      Updated in real-time
+                      • Verified | 24/7 Support
                     </p>
+
+                    <p className="text-[10px] text-muted-foreground whitespace-nowrap">
+                      • Updated in real-time
+                    </p>
+
                   </div>
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
-                    <Users className="h-5 w-5 sm:h-6 sm:w-6 text-emerald-600" />
-                  </div>
+
+                  {/* <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
+                    <Users className="h-4 w-4 sm:h-6 sm:w-6 text-emerald-600" />
+                  </div> */}
+
                 </div>
               </CardContent>
             </Card>
 
             {/* Pending Requests */}
-            <Card onClick={() => navigate("#")}
-              className="group border-0 shadow-md hover:shadow-lg transition-all duration-300 bg-card">
-              <CardContent className="p-4 sm:p-5">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0 space-y-1">
-                    <div className='flex items-center justify-between gap-2'>
-                      <p className="text-xs sm:text-sm font-bold whitespace-nowrap">
-                        Pending Requests
-                      </p>
-                      <p className="text-2xl sm:text-3xl font-bold">
+            <Card
+              onClick={() => navigate('/dashboard/processing')}
+              className="group border-0 shadow-md hover:shadow-lg transition-all duration-300 bg-card"
+            >
+              <CardContent className="p-3 sm:p-5">
+                <div className="flex items-start justify-between gap-2">
+
+                  <div className="flex-1 space-y-1">
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium whitespace-nowrap">
+
+                        {pendingConsultations.length > 0 && (
+                          <span className="relative flex h-2.5 w-2.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+                          </span>
+                        )}
+
+                        <span>Processing</span>
+                      </div>
+
+                      <span className="text-xl sm:text-3xl font-bold leading-none">
                         {pendingConsultations.length}
-                      </p>
+                      </span>
                     </div>
+
                     <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1">
                       <Clock className="h-3 w-3 text-amber-500" />
                       Awating for response
                     </p>
-                    <p className="text-[10px] text-muted-foreground gap-10">
-                      Waiting for Lawyer to confirm your booking
+
+                    <p className="text-[10px] text-muted-foreground">
+                      • Waiting for Lawyer to confirm your booking
                     </p>
-                    <p className="text-[10px] text-muted-foreground gap-10">
-                      Click to know more...
+
+                    <p className="text-[10px] text-muted-foreground whitespace-nowrap">
+                      Click to know more.
                     </p>
 
                   </div>
 
-                  <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                    <Clock className="h-5 w-5 text-amber-600" />
-                  </div>
+                  {/* <div className="w-8 h-8 sm:h-12 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
+                    <Clock className="h-4 w-4 sm:h-6 sm:w-6 text-amber-600" />
+                  </div> */}
+
                 </div>
               </CardContent>
             </Card>
-
 
             {/* Accepted — Complete Payment */}
-            <Card onClick={() => navigate("#")}
-              className="group border-0 shadow-md hover:shadow-lg transition-all duration-300 bg-card">
-              <CardContent className="p-4 sm:p-5">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0 space-y-1">
-                    <div className='flex items-center justify-between gap-2'>
-                      <p className="text-xs sm:text-sm font-bold whitespace-nowrap">
-                        Payment Pending
-                      </p>
-                      <p className="text-2xl sm:text-3xl font-bold">
-                        {acceptedUnpaid.length}
-                      </p>
-                    </div>
-                    <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1">
-                      <CreditCard className="h-3 w-3 text-emerald-500" />
-                      Request Accepted
-                    </p>
-                    <p className="text-[10px] text-muted-foreground gap-10">
-                      Proceed with the payment
-                    </p>
-                    <p className="text-[10px] text-muted-foreground gap-10">
-                      Click to know more...
-                    </p>
-                  </div>
+            <Card
+              onClick={() => navigate("/dashboard/payments")}
+              className="group border-0 shadow-md hover:shadow-lg transition-all duration-300 bg-card"
+            >
+              <CardContent className="p-3 sm:p-5">
+                <div className="flex items-start justify-between gap-2">
 
-                  <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                    <CreditCard className="h-5 w-5 text-emerald-600" />
+                  <div className="flex-1 space-y-1">
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium whitespace-nowrap">
+
+                        {acceptedUnpaid.length > 0 && (
+                          <span className="relative flex h-2.5 w-2.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500"></span>
+                          </span>
+                        )}
+
+                        <span>Payment</span>
+                      </div>
+
+                      <span className="text-xl sm:text-3xl font-bold leading-none">
+                        {acceptedUnpaid.length}
+                      </span>
+                    </div>
+
+                    <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1">
+                      <CreditCard className="h-3 w-3 text-green-500" />
+                      Secure and Trusted
+                    </p>
+
+                    <p className="text-[10px] text-muted-foreground">
+                      • Proceed with the payment, Lawyer is waiting
+                    </p>
+
+                    <p className="text-[10px] text-muted-foreground whitespace-nowrap">
+                      Click to know more.
+                    </p>
+
                   </div>
+                  {/* 
+                  <div className="w-8 h-8 sm:h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
+                    <CreditCard className="h-4 w-4 sm:h-6 sm:w-6 text-emerald-600" />
+                  </div> */}
+
                 </div>
               </CardContent>
             </Card>
+
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

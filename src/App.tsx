@@ -41,6 +41,11 @@ import ConsultationHistory from "./pages/dashboard/ClientConsultationhistory";
 import ClientConsultation from "./pages/consultation/ClientConsultation";
 import LawyerConsultation from "./pages/consultation/LawyerConsultation";
 import SavedLawyers from "./pages/SavedLawyers";
+import ClientActiveSessions from "./pages/dashboard/ClientActiveSessions";
+import ClientProcessing from "./pages/dashboard/ClientProcessing";
+import ClientPayments from "./pages/dashboard/ClientPayments";
+import ClientTransactionHistory from "./pages/dashboard/ClientTransactionHistory";
+
 
 const queryClient = new QueryClient();
 
@@ -92,6 +97,10 @@ const App = () => (
                 <Route path="/consultation-history" element={<ConsultationHistory />} />
                 <Route path="/client/consultation/:id" element={<ClientConsultation />} />
                 <Route path="/lawyer/consultation/:id" element={<LawyerConsultation />} />
+                <Route path="/dashboard/active-sessions" element={<ClientActiveSessions />} />
+                <Route path="/dashboard/processing" element={<ClientProcessing />} />
+                <Route path="/dashboard/payments" element={<ClientPayments />} />
+                <Route path="/dashboard/transactions" element={<ClientTransactionHistory />} />
 
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />

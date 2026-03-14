@@ -1,4 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,9 +10,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { initiateRazorpayPayment } from '@/lib/razorpay';
 import {
     MessageSquare, Phone, Video, Clock, Shield,
-    Loader2, User, FileText, Send, Timer
+    Loader2, User, FileText, Send, Timer, CreditCard, XCircle, AlertTriangle,
+    CheckCircle
 } from 'lucide-react';
 
 const AGENDA_CATEGORIES = [
@@ -24,12 +28,32 @@ const AGENDA_CATEGORIES = [
     { value: 'immigration', label: 'Immigration' },
     { value: 'cyber_crime', label: 'Cyber Crime' },
     { value: 'other', label: 'Other' },
+    { value: 'tenant_landlord', label: 'Tenant / Landlord Dispute' },
+    { value: 'insurance_claim', label: 'Insurance Claim' },
+    { value: 'intellectual_property', label: 'Intellectual Property / Copyright' },
+    { value: 'cheque_bounce', label: 'Cheque Bounce / Financial Fraud' },
+    { value: 'motor_accident', label: 'Motor Accident Claim' },
+    { value: 'domestic_violence', label: 'Domestic Violence' },
+    { value: 'labour_dispute', label: 'Labour / Industrial Dispute' },
+    { value: 'medical_negligence', label: 'Medical Negligence' },
+    { value: 'will_succession', label: 'Will & Succession' },
+    { value: 'startup_legal', label: 'Startup / Company Registration' },
+    { value: 'gst_tax_notice', label: 'GST / Tax Notice' },
+
+
 ];
 
 const URGENCY_OPTIONS = [
     { value: 'low', label: 'Not urgent — within a week' },
     { value: 'medium', label: 'Moderately urgent — within 2-3 days' },
     { value: 'high', label: 'Very urgent — need help today' },
+    { value: 'critical', label: 'Emergency — need help right now' },
+];
+const DOCUMENT_OPTIONS = [
+    { value: 'yes', label: 'Yes, I have documents to share' },
+    { value: 'no', label: 'No documents at this time' },
+    { value: 'will_share', label: 'Will share during consultation' },
+
 ];
 
 interface LawyerInfo {
@@ -60,15 +84,20 @@ export const BookingAgendaModal = ({
 
     const { user } = useAuth();
     const { toast } = useToast();
+    const navigate = useNavigate();
 
     const [consultationType, setConsultationType] = useState<'chat' | 'audio' | 'video'>(initialType);
     const [agendaCategory, setAgendaCategory] = useState('');
     const [urgency, setUrgency] = useState('');
     const [agendaDetails, setAgendaDetails] = useState('');
+    const [documentStatus, setDocumentStatus] = useState('');
+    const [priorAction, setPriorAction] = useState('');
     const [submitting, setSubmitting] = useState(false);
-    const [step, setStep] = useState<'form' | 'waiting'>('form');
+
+    const [step, setStep] = useState<'form' | 'waiting' | 'accepted' | 'rejected' | 'timeout'>('form');
     const [countdown, setCountdown] = useState(60);
     const [pendingConsultationId, setPendingConsultationId] = useState<string | null>(null);
+    const [payingNow, setPayingNow] = useState(false);
 
     useEffect(() => {
         setConsultationType(initialType);
@@ -109,7 +138,7 @@ export const BookingAgendaModal = ({
 
     useEffect(() => {
 
-        if (step !== 'waiting' || !pendingConsultationId) return;
+        if (!pendingConsultationId || (step !== 'waiting' && step !== 'accepted')) return;
 
         const channel = supabase
             .channel(`booking-wait-${pendingConsultationId}`)
@@ -125,26 +154,34 @@ export const BookingAgendaModal = ({
 
                     const updated = payload.new as any;
 
-                    if (updated.status === 'active') {
+                    if (updated.status === 'active' && updated.payment_status === 'unpaid') {
+                        // Lawyer accepted! Show pay button
+                        setStep('accepted');
 
                         toast({
                             title: '✅ Lawyer Accepted!',
                             description: 'Please complete the payment to start your consultation.',
                         });
+                    } else if (updated.status === 'active' && updated.payment_status === 'paid') {
+                        // Payment done, redirect to consultation
+                        toast({
+                            title: '🎉 Consultation Started!',
+                            description: 'Redirecting to your consultation...',
+                        });
 
                         resetAndClose();
-                        onSuccess?.();
+                        navigate(`/consultation/${pendingConsultationId}`);
                     }
 
                     else if (updated.status === 'cancelled') {
+                        setStep('rejected');
 
                         toast({
                             variant: 'destructive',
                             title: 'Request Declined',
-                            description: 'The lawyer declined your consultation request.',
+                            description: 'The lawyer declined your consultation request. Please try another lawyer.',
                         });
 
-                        resetAndClose();
                     }
                 }
             )
@@ -164,16 +201,25 @@ export const BookingAgendaModal = ({
                 .update({ status: 'cancelled' })
                 .eq('id', pendingConsultationId);
         }
+        setStep('timeout');
+    }, [pendingConsultationId]);
+    const handleCancelRequest = async () => {
+        if (pendingConsultationId) {
+            await supabase
+                .from('consultations')
+                .update({ status: 'cancelled' })
+                .eq('id', pendingConsultationId);
+        }
 
         toast({
-            variant: 'destructive',
-            title: 'Request Timed Out',
-            description: 'The lawyer did not respond within 60 seconds. Please try again.',
+            title: 'Request Cancelled',
+            description: 'Your consultation request has been cancelled.',
         });
 
         resetAndClose();
 
-    }, [pendingConsultationId]);
+        // }, [pendingConsultationId]);
+    };
 
     const resetAndClose = () => {
 
@@ -181,8 +227,11 @@ export const BookingAgendaModal = ({
         setAgendaCategory('');
         setUrgency('');
         setAgendaDetails('');
+        setDocumentStatus('');
+        setPriorAction('');
         setCountdown(60);
         setPendingConsultationId(null);
+        setPayingNow(false);
 
         onClose();
     };
@@ -210,8 +259,12 @@ export const BookingAgendaModal = ({
             const urgencyLabel =
                 URGENCY_OPTIONS.find(u => u.value === urgency)?.label || urgency;
 
-            const fullAgenda =
-                `[${categoryLabel}] [${urgencyLabel}]\n${agendaDetails.trim()}`;
+            const docLabel = DOCUMENT_OPTIONS.find(d => d.value === documentStatus)?.label || '';
+
+            let fullAgenda = `[${categoryLabel}] [${urgencyLabel}]`;
+            if (docLabel) fullAgenda += ` [Documents: ${docLabel}]`;
+            if (priorAction.trim()) fullAgenda += `\nPrior Action: ${priorAction.trim()}`;
+
 
             const { data, error } = await supabase
                 .from('consultations')
@@ -251,43 +304,153 @@ export const BookingAgendaModal = ({
             setSubmitting(false);
         }
     };
+    const handlePayment = async () => {
+        if (!pendingConsultationId) return;
+        setPayingNow(true);
+        await initiateRazorpayPayment({
+            consultationId: pendingConsultationId,
+            onSuccess: (id) => {
+                toast({
+                    title: '✅ Payment Successful!',
+                    description: 'Redirecting to consultation...',
+                });
+                setPayingNow(false);
+                resetAndClose();
+                onSuccess?.();
+                navigate(`/consultation/${id}`);
+            },
+            onError: (error) => {
+                toast({
+                    variant: 'destructive',
+                    title: 'Payment Failed',
+                    description: error,
+                });
+                setPayingNow(false);
+            },
+        });
+    };
+    // Client cancels AFTER lawyer accepted (before paying)
+    const handleCancelAfterAccept = async () => {
+        if (pendingConsultationId) {
+            await supabase
+                .from('consultations')
+                .update({ status: 'cancelled' })
+                .eq('id', pendingConsultationId);
+        }
+        toast({
+            title: 'Booking Cancelled',
+            description: 'The consultation has been cancelled.',
+        });
+        resetAndClose();
+    };
 
     return (
 
-        <Dialog
-            open={isOpen}
-            onOpenChange={(open) => { if (!open) resetAndClose(); }}
-        >
+        <Dialog open={isOpen} onOpenChange={(open) => { if (!open && step === 'form') resetAndClose(); }}>
 
             <DialogContent
-                className="
-                w-[95vw]
-                sm:max-w-md
-                md:max-w-lg
-                max-h-[90vh]
-                overflow-hidden
-                p-0
-                "
+                className="max-w-lg max-h-[90vh] overflow-hidden p-0"
+                onPointerDownOutside={(e) => { if (step !== 'form') e.preventDefault(); }}
             >
 
-                <div className="max-h-[90vh] overflow-y-auto p-6">
+
+
+
+                <div className="max-h-[90vh] overflow-y-auto p-6 scroll-smooth [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-primary/40 [&::-webkit-scrollbar-thumb]:rounded-full">
 
                     <DialogHeader>
 
                         <DialogTitle className="flex items-center gap-2">
                             <FileText className="h-5 w-5 text-primary" />
-                            Book Consultation
+                            {step === 'accepted' ? 'Complete Payment' : step === 'waiting' ? 'Waiting for Lawyer' : step === 'rejected' ? 'Request Declined' : step === 'timeout' ? 'Request Timed Out' : 'Book Consultation'}
                         </DialogTitle>
 
                         <DialogDescription>
                             {step === 'waiting'
                                 ? 'Waiting for the lawyer to accept your request...'
-                                : 'Fill in your consultation details to send a request'}
+                                : step === 'accepted'
+                                    ? 'The lawyer accepted! Pay now to start.'
+                                    : step === 'rejected'
+                                        ? 'The lawyer was unable to take your request.'
+                                        : step === 'timeout'
+                                            ? 'The lawyer did not respond in time.'
+                                            : 'Fill in your consultation details to send a request'}
                         </DialogDescription>
 
                     </DialogHeader>
 
-                    {step === 'waiting' ? (
+                    {step === 'timeout' ? (
+                        <div className="py-8 text-center space-y-4">
+                            <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto">
+                                <AlertTriangle className="h-8 w-8 text-amber-500" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-semibold mb-1">Lawyer Did Not Respond</h3>
+                                <p className="text-sm text-muted-foreground">
+                                    The lawyer didn't respond within 60 seconds. Please try another lawyer.
+                                </p>
+                            </div>
+                            <Button onClick={resetAndClose} className="gap-2">
+                                Try Another Lawyer
+                            </Button>
+                        </div>
+                    ) : step === 'rejected' ? (
+                        <div className="py-8 text-center space-y-4">
+                            <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto">
+                                <XCircle className="h-8 w-8 text-red-500" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-semibold mb-1">Request Declined</h3>
+                                <p className="text-sm text-muted-foreground">
+                                    The lawyer was unable to accept your request. Please try another lawyer.
+                                </p>
+                            </div>
+                            <Button onClick={resetAndClose} className="gap-2">
+                                Try Another Lawyer
+                            </Button>
+                        </div>
+                    ) : step === 'accepted' ? (
+                        <div className="py-6 space-y-5">
+                            <div className="text-center">
+                                <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-3">
+                                    <CheckCircle className="h-8 w-8 text-emerald-500" />
+                                </div>
+                                <h3 className="text-lg font-semibold">Lawyer Accepted!</h3>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    {lawyer.full_name} is ready for your {getTypeLabel(consultationType).toLowerCase()} session
+                                </p>
+                            </div>
+                            <div className="flex items-center justify-between p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                                <div className="flex items-center gap-2">
+                                    <CreditCard className="h-5 w-5 text-emerald-600" />
+                                    <span className="font-medium">Consultation Fee</span>
+                                </div>
+                                <span className="text-2xl font-bold text-emerald-600">₹{sessionCost.toFixed(2)}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <Shield className="h-4 w-4 flex-shrink-0" />
+                                <span>The lawyer is waiting. Complete payment to start your {consultationType} session.</span>
+                            </div>
+                            <div className="flex gap-3">
+                                <Button variant="outline" onClick={handleCancelAfterAccept} className="flex-1 gap-2">
+                                    <XCircle className="h-4 w-4" />
+                                    Cancel
+                                </Button>
+                                <Button
+                                    onClick={handlePayment}
+                                    disabled={payingNow}
+                                    className="flex-1 gap-2"
+                                >
+                                    {payingNow ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <CreditCard className="h-4 w-4" />
+                                    )}
+                                    Pay ₹{sessionCost.toFixed(2)}
+                                </Button>
+                            </div>
+                        </div>
+                    ) : step === 'waiting' ? (
 
                         <div className="py-8 text-center space-y-6">
 
@@ -302,9 +465,8 @@ export const BookingAgendaModal = ({
                                         cy="50"
                                         r="45"
                                         fill="none"
-                                        stroke="hsl(var(--primary))"
-                                        strokeWidth="6"
-                                        strokeLinecap="round"
+                                        stroke={countdown <= 10 ? 'hsl(0 84% 60%)' : 'hsl(var(--primary))'}
+                                        strokeWidth="6" strokeLinecap="round"
                                         strokeDasharray={`${2 * Math.PI * 45}`}
                                         strokeDashoffset={`${2 * Math.PI * 45 * (1 - countdown / 60)}`}
                                         className="transition-all duration-1000 ease-linear"
@@ -313,7 +475,7 @@ export const BookingAgendaModal = ({
                                 </svg>
 
                                 <div className="absolute inset-0 flex items-center justify-center">
-                                    <span className="text-3xl font-bold">{countdown}</span>
+                                    <span className={`text-3xl font-bold ${countdown <= 10 ? 'text-red-500' : ''}`}>{countdown}</span>
                                 </div>
 
                             </div>
@@ -335,7 +497,8 @@ export const BookingAgendaModal = ({
                                 <span>Request will auto-cancel if not accepted in time</span>
                             </div>
 
-                            <Button variant="outline" onClick={resetAndClose}>
+                            <Button variant="outline" onClick={handleCancelRequest} className="gap-2">
+                                <XCircle className="h-4 w-4" />
                                 Cancel Request
                             </Button>
 
@@ -343,7 +506,7 @@ export const BookingAgendaModal = ({
 
                     ) : (
 
-                        <div className="space-y-5">
+                        <div className="space-y-5 max-h-[70vh] overflow-y-auto pr-1">
 
                             {/* Lawyer Info */}
 
@@ -399,19 +562,17 @@ export const BookingAgendaModal = ({
 
                                         <button
                                             key={type}
-                                            type="button"
+                                            // type="button"
                                             onClick={() => setConsultationType(type)}
                                             className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all ${consultationType === type
-                                                ? 'border-primary bg-primary/5 text-primary'
+                                                ? 'border-primary bg-primary/5'
                                                 : 'border-border hover:border-primary/30'
                                                 }`}
                                         >
 
                                             {getTypeIcon(type)}
 
-                                            <span className="text-xs font-medium">
-                                                {getTypeLabel(type)}
-                                            </span>
+                                            <span className="text-xs font-medium capitalize">{getTypeLabel(type)}</span>
 
                                         </button>
 
@@ -421,144 +582,69 @@ export const BookingAgendaModal = ({
 
                             </div>
 
-                            {/* Cost */}
 
-                            <div className="flex items-center justify-between p-3 bg-primary/5 rounded-lg border">
-
-                                <div className="flex items-center gap-2 text-sm">
-                                    <Clock className="h-4 w-4 text-muted-foreground" />
-                                    <span>{minimumMinutes} min session</span>
-                                </div>
-
-                                <span className="text-lg font-bold text-primary">
-                                    ₹{sessionCost.toFixed(2)}
-                                </span>
-
-                            </div>
 
                             {/* Category */}
 
                             <div className="space-y-2">
 
-                                <Label className="text-sm font-medium">
-                                    Agenda Category <span className="text-red-500">*</span>
-                                </Label>
+                                <Label className="text-sm font-medium">Legal Category *</Label>
 
                                 <Select value={agendaCategory} onValueChange={setAgendaCategory}>
 
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Select your legal issue type" />
+                                        <SelectValue placeholder="Select category..." />
                                     </SelectTrigger>
 
                                     <SelectContent>
 
                                         {AGENDA_CATEGORIES.map((cat) => (
 
-                                            <SelectItem key={cat.value} value={cat.value}>
-                                                {cat.label}
-                                            </SelectItem>
+                                            <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
 
                                         ))}
 
                                     </SelectContent>
 
                                 </Select>
-
                             </div>
 
-                            {/* Urgency */}
-
-                            <div className="space-y-2">
-
-                                <Label className="text-sm font-medium">
-                                    Urgency Level
-                                </Label>
-
-                                <Select value={urgency} onValueChange={setUrgency}>
-
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="How urgent is your matter?" />
-                                    </SelectTrigger>
-
-                                    <SelectContent>
-
-                                        {URGENCY_OPTIONS.map((opt) => (
-
-                                            <SelectItem key={opt.value} value={opt.value}>
-                                                {opt.label}
-                                            </SelectItem>
-
-                                        ))}
-
-                                    </SelectContent>
-
-                                </Select>
-
-                            </div>
 
                             {/* Details */}
 
                             <div className="space-y-2">
 
-                                <Label className="text-sm font-medium">
-                                    Describe Your Issue <span className="text-red-500">*</span>
-                                </Label>
+                                <Label className="text-sm font-medium">Describe Your Issue *</Label>
 
                                 <Textarea
-                                    placeholder="Provide details about your legal issue..."
+                                    placeholder="Briefly describe your legal issue so the lawyer can prepare..."
                                     value={agendaDetails}
                                     onChange={(e) => setAgendaDetails(e.target.value)}
-                                    className="min-h-[100px] resize-none"
-                                    maxLength={1000}
+                                    rows={3}
                                 />
 
-                                <p className="text-xs text-muted-foreground text-right">
-                                    {agendaDetails.length}/1000
-                                </p>
-
                             </div>
-
-                            {/* Info */}
-
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-
-                                <Shield className="h-4 w-4 flex-shrink-0" />
-
-                                <span>
-                                    Your request will be sent to the lawyer. Payment happens after they accept.
-                                </span>
-
+                            {/* Price Info */}
+                            <div className="flex items-center justify-between p-3 bg-primary/5 rounded-xl border border-primary/20">
+                                <div className="flex items-center gap-2 text-sm">
+                                    <CreditCard className="h-4 w-4 text-primary" />
+                                    <span>Session Fee</span>
+                                </div>
+                                <span className="font-bold text-primary">₹{sessionCost.toFixed(2)}</span>
                             </div>
-
-                            {/* Buttons */}
-
-                            <div className="flex gap-3">
-
-                                <Button
-                                    variant="outline"
-                                    onClick={resetAndClose}
-                                    className="flex-1"
-                                >
-                                    Cancel
-                                </Button>
-
-                                <Button
-                                    onClick={handleSubmit}
-                                    disabled={!agendaCategory || !agendaDetails.trim() || submitting}
-                                    className="flex-1 gap-2"
-                                >
-
-                                    {submitting ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                        <Send className="h-4 w-4" />
-                                    )}
-
-                                    Book Consultation
-
-                                </Button>
-
-                            </div>
+                            {/* Submit */}
+                            <Button
+                                onClick={handleSubmit}
+                                disabled={submitting || !agendaCategory || !agendaDetails.trim()}
+                                className="transition-all duration-300 hover:scale-[1.02]"
+                            >
+                                {submitting ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Send className="h-4 w-4" />
+                                )}
+                                Send Consultation Request
+                            </Button>
 
                         </div>
 

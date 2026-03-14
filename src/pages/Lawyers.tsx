@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-// import { MainLayout } from '@/components/layout/MainLayout';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-// import { Search, Filter, Users, Zap, X } from 'lucide-react';
+
 import { Skeleton } from '@/components/ui/skeleton';
 import { LawyerCard } from '@/components/lawyers/LawyerCard';
 import { ClientLayout } from '@/components/layout/ClientLayout';
@@ -14,7 +14,8 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Filter, Users, X, Star, SlidersHorizontal, ChevronDown, ChevronUp, Globe, Briefcase, IndianRupee, ArrowLeft } from 'lucide-react';
+import { Search, Filter, Users, X, Star, SlidersHorizontal, ChevronDown, ChevronUp, Globe, Briefcase, IndianRupee, ArrowLeft, TrendingUp, Shield } from 'lucide-react';
+import Consultation from './Consultation';
 
 interface LawyerWithProfile {
   id: string;
@@ -53,7 +54,7 @@ const Lawyers = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const [showFilters, setShowFilters] = useState(filterParam === 'specialization');
-  // Filter states
+
   const [minRating, setMinRating] = useState(0);
   const [minExperience, setMinExperience] = useState(0);
   const [maxPrice, setMaxPrice] = useState(100);
@@ -93,21 +94,11 @@ const Lawyers = () => {
     if (lawyerData && lawyerData.length > 0) {
       const userIds = lawyerData.map(l => l.user_id);
 
-      // const { data: profilesData } = await supabase
-      //   .from('profiles')
-      //   .select('id, full_name, avatar_url')
-      //   .in('id', userIds);
-      // const { data: profilesData } = await supabase.from('profiles').select('id, full_name, avatar_url').in('id', userIds);
+
       const { data: profilesData } = await supabase.from('profiles').select('id, full_name, avatar_url, date_of_birth').in('id', userIds);
       const enrichedLawyers = lawyerData.map(lawyer => {
         const profile = profilesData?.find(p => p.id === lawyer.user_id);
-        // return {
-        //   ...lawyer,
-        //   // full_name: profile?.full_name || 'Legal Professional',
-        //   full_name: formatLawyerName(profile?.full_name),
-        //   avatar_url: profile?.avatar_url,
-        // };
-        // return { ...lawyer, full_name: formatLawyerName(profile?.full_name) || 'Legal Professional', avatar_url: profile?.avatar_url };
+
         return { ...lawyer, full_name: profile?.full_name || 'Legal Professional', avatar_url: profile?.avatar_url, date_of_birth: profile?.date_of_birth };
       });
 
@@ -118,17 +109,7 @@ const Lawyers = () => {
     setLoading(false);
   };
 
-  // const filteredLawyers = lawyers.filter(lawyer => {
-  //   const specializations = lawyer.specializations?.join(' ').toLowerCase() || '';
-  //   const lawyerName = lawyer.full_name?.toLowerCase() || '';
-  //   const query = searchQuery.toLowerCase();
-
-  //   const matchesSearch = !query || specializations.includes(query) || lawyerName.includes(query);
-  //   const matchesCategory = !categoryFilter || 
-  //     lawyer.specializations?.some(s => s.toLowerCase().includes(categoryFilter.toLowerCase()));
-
-  //   return matchesSearch && matchesCategory;
-  // });
+  ;
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (minRating > 0) count++;
@@ -141,8 +122,6 @@ const Lawyers = () => {
     return count;
   }, [minRating, minExperience, maxPrice, selectedSpecializations, selectedLanguages, onlineOnly, categoryFilter]);
 
-  // const onlineLawyers = filteredLawyers.filter(l => l.is_available);
-  // const offlineLawyers = filteredLawyers.filter(l => !l.is_available);
   const filteredAndSortedLawyers = useMemo(() => {
     let result = lawyers.filter(lawyer => {
       const specializations = lawyer.specializations?.join(' ').toLowerCase() || '';
@@ -150,7 +129,6 @@ const Lawyers = () => {
       const query = searchQuery.toLowerCase();
 
 
-      // const clearCategoryFilter = () => {
       const matchesSearch = !query || specializations.includes(query) || lawyerName.includes(query);
       const matchesCategory = !categoryFilter || lawyer.specializations?.some(s => s.toLowerCase().includes(categoryFilter.toLowerCase()));
       const matchesRating = !minRating || (lawyer.rating && lawyer.rating >= minRating);
@@ -210,91 +188,89 @@ const Lawyers = () => {
     // <MainLayout> 
     <ClientLayout>
       <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background">
-        {/* Header */}
-        <div className="bg-card border-b border-border">
-          {/* <div className="container mx-auto px-4 py-12"> */}
-          <div className="container mx-auto px-4 py-8 md:py-12">
-            <div className="flex items-center gap-3 mb-4">
-              <button
-                onClick={() => navigate('/dashboard')}
-                className="p-2 hover:bg-secondary rounded-lg transition-colors"
-                title="Back to dashboard"
-              >
-                <ArrowLeft className="h-6 w-6 text-foreground" />
-              </button>
-              <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">
-                <Users className="h-6 w-6 text-primary-foreground" />
-              </div>
-              <div>
-                {/* <h1 className="font-serif text-4xl font-bold">Find a Lawyer</h1>
-                <p className="text-muted-foreground">
-                  {filteredLawyers.length} Lawyer are there • {onlineLawyers.length} online now */}
-                <h1 className="font-serif text-2xl md:text-4xl font-bold">
-                  {sortBy === 'top-rated' ? 'Top Rated Lawyers' : 'Find a Lawyer'}
-                </h1>
-                <p className="text-muted-foreground text-sm md:text-base">
-                  {filteredAndSortedLawyers.length} Lawyer{filteredAndSortedLawyers.length !== 1 ? 's' : ''} are there • {onlineLawyers.length} online now
-                </p>
-              </div>
-            </div>
+        {/* Hero Header */}
+        <div className="relative bg-card border-b border-border overflow-hidden">
+          {/* Decorative background elements */}
 
-            {/* Search & Filters */}
-            {/* <div className="flex flex-col sm:flex-row gap-4 mt-8 max-w-2xl"> */}
-            <div className="flex flex-col sm:flex-row gap-3 mt-6 max-w-3xl">
-              <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input
-                  placeholder="Search by name or specialization..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-12 h-12 text-base bg-background border-border"
-                />
-              </div>
-              {/* <Button variant="outline" size="lg" className="gap-2 h-12">
-                <Filter className="h-5 w-5" /> */}
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-full sm:w-48 h-12">
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="default">Default</SelectItem>
-                  <SelectItem value="top-rated">Top Rated</SelectItem>
-                  <SelectItem value="experience">Most Experienced</SelectItem>
-                  <SelectItem value="price-low">Price: Low to High</SelectItem>
-                  <SelectItem value="price-high">Price: High to Low</SelectItem>
-                  <SelectItem value="reviews">Most Reviews</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button
-                variant={showFilters ? "default" : "outline"}
-                size="lg"
-                className="gap-2 h-12 shrink-0"
-                onClick={() => setShowFilters(!showFilters)}
-              >
-                <SlidersHorizontal className="h-4 w-4" />
-                Filters
-                {activeFilterCount > 0 && (
-                  <Badge variant="secondary" className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-xs rounded-full">
-                    {activeFilterCount}
-                  </Badge>
-                )}
-                {showFilters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 relative z-10">
+            {/* Title Row */}
+            <div className="flex items-center sm:flex-row sm:items-center gap-4 mb-6 animate-fade-in">
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate('/dashboard')}>
+                <ArrowLeft className="h-5 w-5" />
               </Button>
+              <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-primary flex items-center justify-center shadow-lg shrink-0">
+                <Users className="h-6 w-6 md:h-7 md:w-7 text-primary-foreground" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h1 className="font-serif text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
+                  {/* {sortBy === 'top-rated' ? 'Top Rated Lawyers' : 'Find a Lawyer'} */}
+                  {sortBy === 'top-rated' ? 'Top Rated Lawyers' :
+                    sortBy === 'experience' ? 'Most Experienced Lawyers' :
+                      sortBy === 'price-low' ? 'Affordable Lawyers' :
+                        sortBy === 'price-high' ? 'Premium Lawyers' :
+                          sortBy === 'reviews' ? 'Most Reviewed Lawyers' :
+                            'Find a Lawyer'
+                  }
+                </h1>
+                <p className="text-muted-foreground text-sm md:text-base mt-1">
+                  Verifird Lawyers • Instant Consultation • Available Now
+                </p>
+
+              </div>
             </div>
 
-            {/* Active Filters */}
-            {/* {categoryFilter && (
-              <div className="mt-4 flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Filtering by:</span>
-                <Badge variant="secondary" className="gap-1.5 pr-1.5">
-                  {categoryFilter}
-                  <button 
-                    onClick={clearCategoryFilter}
-                    className="ml-1 hover:bg-muted rounded-full p-0.5"
+
+
+            {/* Search & Filter Controls */}
+            <div className="flex flex-col gap-3 animate-fade-in" style={{ animationDelay: '0.1s' }}>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <p className="text-muted-foreground text-sm md:text-base mt-1 max-w-2xl">
+                  Search and connect with verified lawyers available for instant consultation.
+                  Filter by specialization, ratings, and experience to find the right legal expert.
+                </p>
+                <div className="relative flex-1">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by name or specialization..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-12 h-12 text-base bg-background border-border focus:ring-2 focus:ring-primary/20 transition-all"
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger className="w-full sm:w-48 h-12">
+                      <SelectValue placeholder="Sort by" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="default">Default</SelectItem>
+                      <SelectItem value="top-rated">Top Rated</SelectItem>
+                      <SelectItem value="experience">Most Experienced</SelectItem>
+                      <SelectItem value="price-low">Price: Low to High</SelectItem>
+                      <SelectItem value="price-high">Price: High to Low</SelectItem>
+                      <SelectItem value="reviews">Most Reviews</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant={showFilters ? "default" : "outline"}
+                    size="lg"
+                    className="gap-2 h-12 shrink-0 transition-all duration-200"
+                    onClick={() => setShowFilters(!showFilters)}
                   >
-                    <X className="h-3 w-3" />
-                  </button>
-                </Badge> */}
+                    <SlidersHorizontal className="h-4 w-4" />
+                    <span className="hidden xs:inline">Filters</span>
+                    {activeFilterCount > 0 && (
+                      <Badge variant="secondary" className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-xs rounded-full">
+                        {activeFilterCount}
+                      </Badge>
+                    )}
+                    {showFilters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+
             {/* Filter Panel */}
             {showFilters && (
               <div className="mt-6 p-4 md:p-6 bg-background border border-border rounded-xl animate-fade-in">
@@ -308,52 +284,37 @@ const Lawyers = () => {
                     </Button>
                   )}
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+
                   {/* Rating Filter */}
                   <div className="space-y-3">
                     <Label className="text-sm font-medium flex items-center gap-2">
                       <Star className="h-4 w-4 text-amber-500" /> Minimum Rating
                     </Label>
                     <div className="flex items-center gap-3">
-                      <Slider
-                        value={[minRating]}
-                        onValueChange={([val]) => setMinRating(val)}
-                        max={5}
-                        step={0.5}
-                        className="flex-1"
-                      />
+                      <Slider value={[minRating]} onValueChange={([val]) => setMinRating(val)} max={5} step={0.5} className="flex-1" />
                       <span className="text-sm font-medium w-8 text-center">{minRating > 0 ? `${minRating}+` : 'Any'}</span>
                     </div>
                   </div>
+
                   {/* Experience Filter */}
                   <div className="space-y-3">
                     <Label className="text-sm font-medium flex items-center gap-2">
                       <Briefcase className="h-4 w-4 text-blue-500" /> Min. Experience (years)
                     </Label>
                     <div className="flex items-center gap-3">
-                      <Slider
-                        value={[minExperience]}
-                        onValueChange={([val]) => setMinExperience(val)}
-                        max={30}
-                        step={1}
-                        className="flex-1"
-                      />
+                      <Slider value={[minExperience]} onValueChange={([val]) => setMinExperience(val)} max={30} step={1} className="flex-1" />
                       <span className="text-sm font-medium w-8 text-center">{minExperience > 0 ? `${minExperience}+` : 'Any'}</span>
                     </div>
                   </div>
+
                   {/* Price Filter */}
                   <div className="space-y-3">
                     <Label className="text-sm font-medium flex items-center gap-2">
                       <IndianRupee className="h-4 w-4 text-emerald-500" /> Max Price/min
                     </Label>
                     <div className="flex items-center gap-3">
-                      <Slider
-                        value={[maxPrice]}
-                        onValueChange={([val]) => setMaxPrice(val)}
-                        max={100}
-                        step={5}
-                        className="flex-1"
-                      />
+                      <Slider value={[minExperience]} onValueChange={([val]) => setMinExperience(val)} max={30} step={1} className="flex-1" />
                       <span className="text-sm font-medium w-12 text-center">₹{maxPrice}</span>
                     </div>
                   </div>
@@ -374,7 +335,7 @@ const Lawyers = () => {
                       <Badge
                         key={spec}
                         variant={selectedSpecializations.includes(spec) ? "default" : "outline"}
-                        className="cursor-pointer hover:bg-primary/10 transition-colors text-xs py-1.5"
+                        className="cursor-pointer hover:bg-primary/10 transition-all duration-200 text-xs py-1.5 select-none"
                         onClick={() => toggleSpecialization(spec)}
                       >
                         {spec}
@@ -393,7 +354,7 @@ const Lawyers = () => {
                       <Badge
                         key={lang}
                         variant={selectedLanguages.includes(lang) ? "default" : "outline"}
-                        className="cursor-pointer hover:bg-primary/10 transition-colors text-xs py-1.5"
+                        className="cursor-pointer hover:bg-primary/10 transition-all duration-200 text-xs py-1.5 select-none"
                         onClick={() => toggleLanguage(lang)}
                       >
                         {lang}
@@ -406,7 +367,8 @@ const Lawyers = () => {
             )}
             {/* Active Filter Badges */}
             {(categoryFilter || activeFilterCount > 0) && !showFilters && (
-              <div className="mt-4 flex flex-wrap items-center gap-2">
+              // <div className="mt-4 flex flex-wrap items-center gap-2">
+              <div className="mt-4 flex flex-wrap items-center gap-2 animate-fade-in">
                 <span className="text-sm text-muted-foreground">Active:</span>
                 {categoryFilter && (
                   <Badge variant="secondary" className="gap-1.5 pr-1.5">
@@ -432,7 +394,6 @@ const Lawyers = () => {
         </div>
 
         {/* Lawyers Grid */}
-        {/* <div className="container mx-auto px-4 py-12"> */}
         <div className="container mx-auto px-4 py-8 md:py-12">
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -456,25 +417,12 @@ const Lawyers = () => {
                 </div>
               ))}
             </div>
-            // ) : filteredLawyers.length === 0 ? (
           ) : filteredAndSortedLawyers.length === 0 ? (
             <div className="text-center py-20">
               <div className="w-20 h-20 rounded-full bg-secondary mx-auto mb-6 flex items-center justify-center">
                 <Users className="h-10 w-10 text-muted-foreground" />
               </div>
               <h2 className="text-2xl font-semibold mb-2">No Lawyers Found</h2>
-              {/* <p className="text-muted-foreground mb-6">
-                Try adjusting your search or filters to find legal professionals
-              </p>
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setSearchQuery('');
-                  clearCategoryFilter();
-                }}
-              >
-                Clear All Filters
-              </Button> */}
               <p className="text-muted-foreground mb-6">Try adjusting your search or filters to find legal professionals</p>
               <Button variant="outline" onClick={clearAllFilters}>Clear All Filters</Button>
             </div>
@@ -485,22 +433,17 @@ const Lawyers = () => {
                 <div className="mb-12">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="flex items-center gap-2 bg-emerald-500/10 text-emerald-600 px-4 py-2 rounded-full">
+
                       <span className="relative flex h-2.5 w-2.5">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
                         <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                       </span>
-                      <span className="font-medium text-sm">Available Now</span>
+                      <span className="font-medium text-sm">Available Now | {onlineLawyers.length} lawyer{onlineLawyers.length !== 1 ? 's' : ''}</span>
                     </div>
-                    {/* <span className="text-muted-foreground text-sm">
-                      {onlineLawyers.length} lawyer{onlineLawyers.length !== 1 ? 's' : ''} online
-                    </span> */}
-                    <span className="text-muted-foreground text-sm">{onlineLawyers.length} lawyer{onlineLawyers.length !== 1 ? 's' : ''} online</span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {/* {onlineLawyers.map((lawyer) => (
-                      <LawyerCard key={lawyer.id} lawyer={lawyer} />
-                    ))} */}
                     {onlineLawyers.map((lawyer) => <LawyerCard key={lawyer.id} lawyer={lawyer} />)}
+
                   </div>
                 </div>
               )}
@@ -511,20 +454,18 @@ const Lawyers = () => {
                   {onlineLawyers.length > 0 && (
                     <div className="flex items-center gap-3 mb-6">
                       <div className="flex items-center gap-2 bg-muted px-4 py-2 rounded-full">
+
                         <span className="w-2.5 h-2.5 rounded-full bg-muted-foreground"></span>
                         <span className="font-medium text-sm text-muted-foreground">Currently Offline</span>
+
                       </div>
-                      {/* <span className="text-muted-foreground text-sm">
-                        {offlineLawyers.length} lawyer{offlineLawyers.length !== 1 ? 's' : ''}
-                      </span> */}
                       <span className="text-muted-foreground text-sm">{offlineLawyers.length} lawyer{offlineLawyers.length !== 1 ? 's' : ''}</span>
+
                     </div>
                   )}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {/* {offlineLawyers.map((lawyer) => (
-                      <LawyerCard key={lawyer.id} lawyer={lawyer} />
-                    ))} */}
                     {offlineLawyers.map((lawyer) => <LawyerCard key={lawyer.id} lawyer={lawyer} />)}
+
                   </div>
                 </div>
               )}
