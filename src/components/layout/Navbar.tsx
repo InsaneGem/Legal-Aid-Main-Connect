@@ -235,7 +235,7 @@
 //               </DropdownMenuTrigger>
 //               <DropdownMenuContent align="start" className="w-56 bg-popover">
 //                 <DropdownMenuLabel className="text-xs text-muted-foreground uppercase tracking-wider">Practice Management</DropdownMenuLabel>
-//                 <DropdownMenuItem onClick={() => navigate('/lawyer/consultations')} className="gap-2 cursor-pointer">
+//                 <DropdownMenuItem onClick={() => navigate('#')} className="gap-2 cursor-pointer">
 //                   <MessageSquare className="h-4 w-4 text-muted-foreground" />
 //                   <div>
 //                     <p className="font-medium">Consultations</p>
@@ -251,14 +251,14 @@
 //                 </DropdownMenuItem>
 //                 <DropdownMenuSeparator />
 //                 <DropdownMenuLabel className="text-xs text-muted-foreground uppercase tracking-wider">Communication</DropdownMenuLabel>
-//                 <DropdownMenuItem onClick={() => navigate('/lawyer/consultations')} className="gap-2 cursor-pointer">
+//                 <DropdownMenuItem onClick={() => navigate('#')} className="gap-2 cursor-pointer">
 //                   <Video className="h-4 w-4 text-muted-foreground" />
 //                   <div>
 //                     <p className="font-medium">Video Consultations</p>
 //                     <p className="text-xs text-muted-foreground">Face-to-face with clients</p>
 //                   </div>
 //                 </DropdownMenuItem>
-//                 <DropdownMenuItem onClick={() => navigate('/lawyer/consultations')} className="gap-2 cursor-pointer">
+//                 <DropdownMenuItem onClick={() => navigate('#')} className="gap-2 cursor-pointer">
 //                   <Phone className="h-4 w-4 text-muted-foreground" />
 //                   <div>
 //                     <p className="font-medium">Audio Consultations</p>
@@ -388,7 +388,7 @@
 //               <p className="px-3 pt-4 pb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">My Practice</p>
 //               <button
 //                 className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-secondary transition-colors text-left"
-//                 onClick={() => { navigate('/lawyer/consultations'); setMobileMenuOpen(false); }}
+//                 onClick={() => { navigate('#'); setMobileMenuOpen(false); }}
 //               >
 //                 <MessageSquare className="h-5 w-5 text-muted-foreground" />
 //                 <span className="text-sm">Consultations</span>

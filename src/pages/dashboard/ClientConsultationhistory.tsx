@@ -54,6 +54,8 @@ const ConsultationHistory = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const CONSULTATIONS_PER_PAGE = 4;
+  const [currentPage, setCurrentPage] = useState(1);
   const [selectedConsultation, setSelectedConsultation] = useState<ConsultationFull | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [recordings, setRecordings] = useState<Recording[]>([]);
@@ -77,7 +79,6 @@ const ConsultationHistory = () => {
       .order('created_at', { ascending: false });
     if (consultationsData && consultationsData.length > 0) {
       const lawyerIds = [...new Set(consultationsData.map(c => c.lawyer_id))];
-      // const [{ data: profiles }, { data: lawyerProfiles }] = await Promise.all([
       const completedIds = consultationsData.filter(c => c.status === 'completed').map(c => c.id);
       const [{ data: profiles }, { data: lawyerProfiles }, { data: reviews }] = await Promise.all([
         supabase.from('profiles').select('id, full_name, avatar_url').in('id', lawyerIds),
@@ -141,6 +142,39 @@ const ConsultationHistory = () => {
     const matchesStatus = filterStatus === 'all' || c.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
+  const totalPages = Math.ceil(filtered.length / CONSULTATIONS_PER_PAGE);
+
+  const paginatedConsultations = filtered.slice(
+    (currentPage - 1) * CONSULTATIONS_PER_PAGE,
+    currentPage * CONSULTATIONS_PER_PAGE
+  );
+
+  const getPageNumbers = () => {
+    const pages: (number | 'ellipsis')[] = [];
+
+    if (totalPages <= 5) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+
+      if (currentPage > 3) pages.push('ellipsis');
+
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+
+      for (let i = start; i <= end; i++) pages.push(i);
+
+      if (currentPage < totalPages - 2) pages.push('ellipsis');
+
+      pages.push(totalPages);
+    }
+
+    return pages;
+  };
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterStatus]);
+
   const stats = {
     total: consultations.length,
     completed: consultations.filter(c => c.status === 'completed').length,
@@ -148,7 +182,6 @@ const ConsultationHistory = () => {
   };
   if (authLoading || loading) {
     return (
-      //   <MainLayout showFooter={false}>
       <ClientLayout>
         <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background">
           <div className="container mx-auto px-4 py-8">
@@ -159,12 +192,10 @@ const ConsultationHistory = () => {
             {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-20 rounded-xl mb-3" />)}
           </div>
         </div>
-        {/* </MainLayout> */}
       </ClientLayout>
     );
   }
   return (
-    // <MainLayout showFooter={false}>
     <ClientLayout>
       <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background">
         <div className="container mx-auto px-4 py-6 sm:py-8 max-w-5xl">
@@ -201,15 +232,6 @@ const ConsultationHistory = () => {
           </div>
           {/* Search & Filter */}
           <div className="flex flex-col sm:flex-row gap-3 mb-6">
-            {/* <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by lawyer name..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 h-10 bg-card"
-              />
-            </div> */}
             <Tabs value={filterStatus} onValueChange={setFilterStatus}>
               <TabsList className="h-10">
                 <TabsTrigger value="all" className="text-xs">All</TabsTrigger>
@@ -232,75 +254,163 @@ const ConsultationHistory = () => {
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {filtered.map((c, index) => {
-                const sc = getStatusConfig(c.status);
-                return (
-                  <Card
-                    key={c.id}
-                    className="border shadow-sm hover:shadow-md hover:border-primary/20 transition-all duration-300 cursor-pointer group animate-fade-in overflow-hidden"
-                    style={{ animationDelay: `${index * 50}ms` }}
-                    onClick={() => openDetail(c)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-11 w-11 flex-shrink-0 border border-border">
-                          <AvatarImage src={c.lawyer_avatar || undefined} />
-                          <AvatarFallback className="bg-gradient-to-br from-primary/20 to-accent/20 text-sm font-semibold">
-                            {c.lawyer_name.charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="font-semibold text-sm truncate group-hover:text-primary transition-colors">
-                              {c.lawyer_name}
-                            </p>
-                            <Badge className={`text-[10px] px-1.5 py-0 gap-1 ${sc.className}`}>
-                              {sc.icon}
-                              {c.status}
-                            </Badge>
+            <>
+              <div className="space-y-3">
+                {paginatedConsultations.map((c, index) => {
+                  const sc = getStatusConfig(c.status);
+                  return (
+                    <Card
+                      key={c.id}
+                      className="border shadow-sm hover:shadow-md hover:border-primary/20 transition-all duration-300 cursor-pointer group animate-fade-in overflow-hidden"
+                      style={{ animationDelay: `${index * 50}ms` }}
+                      onClick={() => openDetail(c)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-11 w-11 flex-shrink-0 border border-border">
+                            <AvatarImage src={c.lawyer_avatar || undefined} />
+                            <AvatarFallback className="bg-gradient-to-br from-primary/20 to-accent/20 text-sm font-semibold">
+                              {c.lawyer_name.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-semibold text-sm truncate group-hover:text-primary transition-colors">
+                                {c.lawyer_name}
+                              </p>
+
+                              <Badge className={`text-[10px] px-1.5 py-0 gap-1 ${sc.className}`}>
+                                {sc.icon}
+                                {c.status}
+                              </Badge>
+                            </div>
+
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 flex-wrap">
+                              <span className="flex items-center gap-1">
+                                {getTypeIcon(c.type)}
+                                <span className="capitalize">{c.type}</span>
+                              </span>
+
+                              <span className="w-1 h-1 rounded-full bg-muted-foreground hidden sm:block" />
+
+                              <span className="hidden sm:inline">
+                                {new Date(c.created_at).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric'
+                                })}
+                              </span>
+
+                              {c.duration_minutes && (
+                                <>
+                                  <span className="w-1 h-1 rounded-full bg-muted-foreground hidden sm:block" />
+                                  <span className="hidden sm:inline">
+                                    {formatDuration(c.duration_minutes)}
+                                  </span>
+                                </>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 flex-wrap">
-                            <span className="flex items-center gap-1">
-                              {getTypeIcon(c.type)}
-                              <span className="capitalize">{c.type}</span>
-                            </span>
-                            <span className="w-1 h-1 rounded-full bg-muted-foreground hidden sm:block" />
-                            <span className="hidden sm:inline">{new Date(c.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                            {c.duration_minutes && (
-                              <>
-                                <span className="w-1 h-1 rounded-full bg-muted-foreground hidden sm:block" />
-                                <span className="hidden sm:inline">{formatDuration(c.duration_minutes)}</span>
-                              </>
+
+                          <div className="flex items-center gap-2 flex-shrink-0">
+
+                            {c.status === 'completed' && !ratedConsultationIds.has(c.id) && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-1.5 text-amber-600 border-amber-500/30 hover:bg-amber-500/10"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setRatingTarget(c);
+                                }}
+                              >
+                                <Star className="h-3.5 w-3.5 fill-amber-400" />
+                                Rate
+                              </Button>
                             )}
+
+                            {c.total_amount && (
+                              <span className="text-sm font-semibold text-foreground hidden sm:block">
+                                ₹{c.total_amount.toFixed(2)}
+                              </span>
+                            )}
+
+                            <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          {c.status === 'completed' && !ratedConsultationIds.has(c.id) && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="gap-1.5 text-amber-600 border-amber-500/30 hover:bg-amber-500/10"
-                              onClick={(e) => { e.stopPropagation(); setRatingTarget(c); }}
-                            >
-                              <Star className="h-3.5 w-3.5 fill-amber-400" />
-                              Rate
-                            </Button>
-                          )}
-                          {c.total_amount && (
-                            <span className="text-sm font-semibold text-foreground hidden sm:block">
-                              ₹{c.total_amount.toFixed(2)}
-                            </span>
-                          )}
-                          <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+
+              {/* PAGINATION */}
+              {totalPages > 1 && (
+                <div className="mt-8 flex flex-col items-center gap-4">
+
+                  <p className="text-sm text-muted-foreground">
+                    Showing {(currentPage - 1) * CONSULTATIONS_PER_PAGE + 1}
+                    –
+                    {Math.min(currentPage * CONSULTATIONS_PER_PAGE, filtered.length)}
+                    of {filtered.length} consultations
+                  </p>
+
+                  <div className="flex items-center gap-2">
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage((p) => p - 1)}
+                    >
+                      Previous
+                    </Button>
+
+                    {/* CURRENT PAGE */}
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="w-9 h-9 p-0"
+                    >
+                      {currentPage}
+                    </Button>
+
+                    {/* NEXT PAGE */}
+                    {currentPage + 1 <= totalPages && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-9 h-9 p-0"
+                        onClick={() => setCurrentPage(currentPage + 1)}
+                      >
+                        {currentPage + 1}
+                      </Button>
+                    )}
+
+                    {/* ELLIPSIS */}
+                    {currentPage + 1 < totalPages && (
+                      <span className="px-2 text-muted-foreground">...</span>
+                    )}
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={currentPage === totalPages}
+                      onClick={() => setCurrentPage((p) => p + 1)}
+                    >
+                      Next
+                    </Button>
+
+                  </div>
+                </div>
+              )}
+            </>
+          )
+
+
+
+          }
         </div>
       </div>
       {/* Detail Dialog */}
@@ -353,7 +463,7 @@ const ConsultationHistory = () => {
                   <div className="bg-card p-3 rounded-lg border text-center">
                     <Star className="h-4 w-4 mx-auto text-amber-500 mb-1" />
                     <p className="text-xs text-muted-foreground">Rating</p>
-                    <p className="text-sm font-semibold">₹{selectedConsultation.lawyer_rating?.toFixed(1) || '—'}</p>
+                    <p className="text-sm font-semibold">{selectedConsultation.lawyer_rating?.toFixed(1) || '—'}</p>
                   </div>
                 </div>
               </div>
@@ -453,8 +563,8 @@ const ConsultationHistory = () => {
                     </Button>
                   )}
                   {selectedConsultation.status === 'active' && (
-                    // <Button className="flex-1 gap-2" onClick={() => { setDetailOpen(false); navigate(`/consultation/${selectedConsultation.id}`); }}>
-                    <Button className="flex-1 gap-2" onClick={() => { setDetailOpen(false); navigate(`/client/consultation/${selectedConsultation.id}`); }}>
+                    <Button className="flex-1 gap-2" onClick={() => { setDetailOpen(false); navigate(`/consultation/${selectedConsultation.id}`); }}>
+
                       Continue Session
                       <ChevronRight className="h-4 w-4" />
                     </Button>
@@ -483,7 +593,6 @@ const ConsultationHistory = () => {
           }}
         />
       )}
-      {/* </MainLayout> */}
     </ClientLayout>
   );
 };

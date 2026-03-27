@@ -21,6 +21,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 export const ClientNavbar = () => {
+
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -36,8 +37,17 @@ export const ClientNavbar = () => {
       isActive(path) ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
     );
   return (
-    // <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
+
+    // remove this line after the after complete the project (below line)
     <nav className="fixed top-[28px] left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
+
+
+
+      {/* uncomment the below line and make it permanent below line after complete the project */}
+      {/* // <nav className="fixed top-0 left-0 right-0 z-[100] bg-background/95 backdrop-blur-md border-b border-border"> */}
+
+
+
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
@@ -83,15 +93,7 @@ export const ClientNavbar = () => {
                     <p className="text-xs text-muted-foreground">Highest client satisfaction</p>
                   </div>
                 </DropdownMenuItem>
-                {/* <DropdownMenuSeparator />
-                <DropdownMenuLabel className="text-xs text-muted-foreground uppercase tracking-wider">Quick Connect</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => navigate('/lawyers')} className="gap-3 cursor-pointer">
-                  <Globe className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">Available Now</p>
-                    <p className="text-xs text-muted-foreground">Lawyers online for instant consultation</p>
-                  </div>
-                </DropdownMenuItem> */}
+
               </DropdownMenuContent>
             </DropdownMenu>
             {/* My Cases Dropdown */}
@@ -116,29 +118,9 @@ export const ClientNavbar = () => {
                     <p className="text-xs text-muted-foreground">Ongoing consultations</p>
                   </div>
                 </DropdownMenuItem>
-                {/* <DropdownMenuItem onClick={() => navigate('/dashboard')} className="gap-3 cursor-pointer">
-                  <History className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">Consultation History</p>
-                    <p className="text-xs text-muted-foreground">Past sessions & transcripts</p>
-                  </div>
-                </DropdownMenuItem> */}
+
                 <DropdownMenuSeparator />
-                {/* <DropdownMenuLabel className="text-xs text-muted-foreground uppercase tracking-wider">Session Types</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => navigate('/dashboard')} className="gap-3 cursor-pointer">
-                  <Video className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">Video Consultations</p>
-                    <p className="text-xs text-muted-foreground">Face-to-face legal advice</p>
-                  </div>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/dashboard')} className="gap-3 cursor-pointer">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">Audio Consultations</p>
-                    <p className="text-xs text-muted-foreground">Voice-only legal guidance</p>
-                  </div>
-                </DropdownMenuItem> */}
+
               </DropdownMenuContent>
             </DropdownMenu>
             {/* Legal Resources Dropdown */}
@@ -191,11 +173,7 @@ export const ClientNavbar = () => {
           </div>
           {/* Right Section */}
           <div className="hidden lg:flex items-center gap-3">
-            {/* Wallet Quick Access */}
-            <Button variant="ghost" size="sm" className="gap-2" onClick={() => navigate('/dashboard')}>
-              <Wallet className="h-4 w-4" />
-              Wallet
-            </Button>
+
             {/* Account Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -214,13 +192,7 @@ export const ClientNavbar = () => {
                     <p className="text-xs text-muted-foreground">Personal info & preferences</p>
                   </div>
                 </DropdownMenuItem>
-                {/* <DropdownMenuItem onClick={() => navigate('/settings')} className="gap-3 cursor-pointer">
-                  <Settings className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">need to change</p>
-                    <p className="text-xs text-muted-foreground">Notifications & privacy</p>
-                  </div>
-                </DropdownMenuItem> */}
+
                 <DropdownMenuItem onClick={() => navigate('/saved-lawyers')} className="gap-3 cursor-pointer">
                   <Heart className="h-4 w-4 text-muted-foreground" />
                   <div>
@@ -246,72 +218,152 @@ export const ClientNavbar = () => {
         </div>
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="lg:hidden py-4 border-t border-border animate-fade-in max-h-[calc(100vh-4rem)] overflow-y-auto">
-            <div className="flex flex-col gap-1">
-              <button
-                className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-secondary transition-colors text-left"
-                onClick={() => { navigate('/dashboard'); setMobileMenuOpen(false); }}
-              >
-                <LayoutDashboard className="h-5 w-5 text-muted-foreground" />
-                <span className="font-medium text-sm">Dashboard</span>
-              </button>
-              <p className="px-3 pt-4 pb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Find Legal Help</p>
-              <button
-                className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-secondary transition-colors text-left"
-                onClick={() => { navigate('/lawyers'); setMobileMenuOpen(false); }}
-              >
-                <Search className="h-5 w-5 text-muted-foreground" />
-                <span className="text-sm">Browse Lawyers</span>
-              </button>
-              <button
-                className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-secondary transition-colors text-left"
-                onClick={() => { navigate('/lawyers'); setMobileMenuOpen(false); }}
-              >
-                <Award className="h-5 w-5 text-muted-foreground" />
-                <span className="text-sm">Top Rated Lawyers</span>
-              </button>
-              <p className="px-3 pt-4 pb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">My Cases</p>
-              <button
-                className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-secondary transition-colors text-left"
-                onClick={() => { navigate('/dashboard'); setMobileMenuOpen(false); }}
-              >
-                <MessageSquare className="h-5 w-5 text-muted-foreground" />
-                <span className="text-sm">All Consultations</span>
-              </button>
-              <button
-                className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-secondary transition-colors text-left"
-                onClick={() => { navigate('/dashboard'); setMobileMenuOpen(false); }}
-              >
-                <History className="h-5 w-5 text-muted-foreground" />
-                <span className="text-sm">Consultation History</span>
-              </button>
-              <p className="px-3 pt-4 pb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Legal Resources</p>
-              <button className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-secondary transition-colors text-left">
-                <BookOpen className="h-5 w-5 text-muted-foreground" />
-                <span className="text-sm">Know Your Rights</span>
-              </button>
-              <button className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-secondary transition-colors text-left">
-                <FileText className="h-5 w-5 text-muted-foreground" />
-                <span className="text-sm">Legal Guides</span>
-              </button>
-              <button className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-secondary transition-colors text-left">
-                <Shield className="h-5 w-5 text-muted-foreground" />
-                <span className="text-sm">Consumer Protection</span>
-              </button>
-              <div className="flex flex-col gap-2 pt-4 mt-2 border-t border-border">
-                {/* <Button variant="outline" className="gap-2 justify-start" onClick={() => { navigate('/settings'); setMobileMenuOpen(false); }}>
-                  <Settings className="h-4 w-4" />
-                  Settings
-                </Button> */}
-                <Button variant="ghost" className="gap-2 justify-start text-destructive" onClick={handleSignOut}>
-                  <LogOut className="h-4 w-4" />
-                  Sign Out
-                </Button>
+
+          <div className="lg:hidden fixed top-16 left-0 right-0 z-[99] bg-background border-t border-border animate-fade-in max-h-[calc(100vh-4rem)] overflow-y-auto shadow-xl">
+
+            <div className="h-full overflow-y-auto px-4 py-4 space-y-6">
+
+              {/* DASHBOARD */}
+              <div>
+                <button
+                  className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-primary/5 hover:bg-primary/10 transition-all"
+                  onClick={() => { navigate('/dashboard'); setMobileMenuOpen(false); }}
+                >
+                  <LayoutDashboard className="h-5 w-5 text-primary" />
+                  <span className="font-semibold text-sm">Dashboard</span>
+                </button>
               </div>
+
+              {/* FIND LEGAL HELP */}
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 mb-2">
+                  Find Legal Help
+                </p>
+
+                <div className="space-y-1">
+                  <button
+                    className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-secondary transition-all"
+                    onClick={() => { navigate('/lawyers'); setMobileMenuOpen(false); }}
+                  >
+                    <Search className="h-5 w-5 text-muted-foreground" />
+                    <div className="text-left">
+                      <p className="text-sm font-medium">Browse Lawyers</p>
+                      <p className="text-xs text-muted-foreground">Find verified professionals</p>
+                    </div>
+                  </button>
+
+                  <button
+                    className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-secondary transition-all"
+                    onClick={() => { navigate('/lawyers?sort=top-rated'); setMobileMenuOpen(false); }}
+                  >
+                    <Award className="h-5 w-5 text-muted-foreground" />
+                    <div className="text-left">
+                      <p className="text-sm font-medium">Top Rated</p>
+                      <p className="text-xs text-muted-foreground">Best reviewed lawyers</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* MY CASES */}
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 mb-2">
+                  My Cases
+                </p>
+
+                <div className="space-y-1">
+                  <button
+                    className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-secondary transition-all"
+                    onClick={() => { navigate('/consultation-history'); setMobileMenuOpen(false); }}
+                  >
+                    <MessageSquare className="h-5 w-5 text-muted-foreground" />
+                    <div className="text-left">
+                      <p className="text-sm font-medium">Consultations</p>
+                      <p className="text-xs text-muted-foreground">Chat, audio & video</p>
+                    </div>
+                  </button>
+
+                  <button
+                    className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-secondary transition-all"
+                    onClick={() => { navigate('/dashboard/active-sessions'); setMobileMenuOpen(false); }}
+                  >
+                    <History className="h-5 w-5 text-muted-foreground" />
+                    <div className="text-left">
+                      <p className="text-sm font-medium">Active Sessions</p>
+                      <p className="text-xs text-muted-foreground">Ongoing consultations</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* LEGAL RESOURCES */}
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 mb-2">
+                  Legal Resources
+                </p>
+
+                <div className="space-y-1">
+                  <button
+                    className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-secondary transition-all"
+                    onClick={() => { navigate('/know-your-rights'); setMobileMenuOpen(false); }}
+                  >
+                    <BookOpen className="h-5 w-5 text-muted-foreground" />
+                    <span className="text-sm">Know Your Rights</span>
+                  </button>
+
+                  <button
+                    className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-secondary transition-all"
+                    onClick={() => { navigate('/legal-guides'); setMobileMenuOpen(false); }}
+                  >
+                    <FileText className="h-5 w-5 text-muted-foreground" />
+                    <span className="text-sm">Legal Guides</span>
+                  </button>
+
+                  <button
+                    className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-secondary transition-all"
+                    onClick={() => { navigate('/consumer-protection'); setMobileMenuOpen(false); }}
+                  >
+                    <Shield className="h-5 w-5 text-muted-foreground" />
+                    <span className="text-sm">Consumer Protection</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* ACCOUNT ACTIONS */}
+              <div className="pt-4 border-t border-border space-y-2">
+
+                <button
+                  className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-secondary transition-all"
+                  onClick={() => { navigate('/manage-account'); setMobileMenuOpen(false); }}
+                >
+                  <UserCheck className="h-5 w-5 text-muted-foreground" />
+                  <span className="text-sm">My Profile</span>
+                </button>
+
+                <button
+                  className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-secondary transition-all"
+                  onClick={() => { navigate('/saved-lawyers'); setMobileMenuOpen(false); }}
+                >
+                  <Heart className="h-5 w-5 text-muted-foreground" />
+                  <span className="text-sm">Saved Lawyers</span>
+                </button>
+
+                <button
+                  className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-destructive hover:bg-destructive/10 transition-all"
+                  onClick={handleSignOut}
+                >
+                  <LogOut className="h-5 w-5" />
+                  <span className="text-sm font-medium">Sign Out</span>
+                </button>
+
+              </div>
+
             </div>
           </div>
         )}
       </div>
     </nav>
+
   );
+
 };

@@ -106,18 +106,18 @@ export const AvatarUpload = ({ userId, currentAvatarUrl, fallbackName, onAvatarC
           onChange={handleFileSelect}
         />
       </div>
-      <div className="space-y-1">
+      {/* <div className="space-y-1">
         <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
           {uploading ? 'Uploading...' : 'Change Photo'}
         </Button>
         {currentAvatarUrl && (
           <Button variant="ghost" size="sm" onClick={handleRemove} disabled={uploading} className="text-destructive hover:text-destructive">
             <Trash2 className="h-3 w-3 mr-1" />
-            Remove
+            Removeeee
           </Button>
         )}
         <p className="text-xs text-muted-foreground">JPG, PNG, GIF. Max 5MB.</p>
-      </div>
+      </div> */}
     </div>
   );
 };

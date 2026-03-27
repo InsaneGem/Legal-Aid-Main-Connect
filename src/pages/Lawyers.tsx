@@ -1,11 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-
 import { Skeleton } from '@/components/ui/skeleton';
 import { LawyerCard } from '@/components/lawyers/LawyerCard';
 import { ClientLayout } from '@/components/layout/ClientLayout';
@@ -14,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Filter, Users, X, Star, SlidersHorizontal, ChevronDown, ChevronUp, Globe, Briefcase, IndianRupee, ArrowLeft, TrendingUp, Shield } from 'lucide-react';
+import { Search, Filter, Users, X, Star, SlidersHorizontal, ChevronDown, ChevronUp, Globe, Briefcase, IndianRupee, ArrowLeft, TrendingUp, Shield, ChevronLeft, ChevronRight } from 'lucide-react';
 import Consultation from './Consultation';
 
 interface LawyerWithProfile {
@@ -32,8 +30,8 @@ interface LawyerWithProfile {
   full_name?: string;
   avatar_url?: string | null;
   date_of_birth?: string | null;
+  total_consultations: number | null;
 }
-
 const SPECIALIZATION_OPTIONS = [
   'Criminal Law', 'Family Law', 'Corporate Law', 'Civil Law',
   'Tax Law', 'Labour Law', 'Property Law', 'Constitutional Law',
@@ -41,20 +39,19 @@ const SPECIALIZATION_OPTIONS = [
   'Intellectual Property', 'Consumer Protection',
 ];
 const LANGUAGE_OPTIONS = ['English', 'Hindi', 'Tamil', 'Telugu', 'Kannada', 'Malayalam', 'Marathi', 'Bengali', 'Gujarati', 'Punjabi'];
-
+const LAWYERS_PER_PAGE = 4;
 const Lawyers = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const categoryFilter = searchParams.get('category');
   const sortParam = searchParams.get('sort');
   const filterParam = searchParams.get('filter');
-
   const [lawyers, setLawyers] = useState<LawyerWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-
   const [showFilters, setShowFilters] = useState(filterParam === 'specialization');
-
+  const [busyLawyerIds, setBusyLawyerIds] = useState<Set<string>>(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
   const [minRating, setMinRating] = useState(0);
   const [minExperience, setMinExperience] = useState(0);
   const [maxPrice, setMaxPrice] = useState(100);
@@ -69,20 +66,35 @@ const Lawyers = () => {
 
   useEffect(() => {
     fetchLawyers();
-
-    const channel = supabase
+    fetchBusyLawyers();
+    const lawyerChannel = supabase
       .channel('lawyer-availability')
-
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'lawyer_profiles' }, () => fetchLawyers())
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    const consultationChannel = supabase
+      .channel('consultation-status-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'consultations' }, () => fetchBusyLawyers())
+      .subscribe();
+    return () => {
+      supabase.removeChannel(lawyerChannel);
+      supabase.removeChannel(consultationChannel);
+    };
   }, []);
-
+  const fetchBusyLawyers = async () => {
+    const { data } = await supabase
+      .from('consultations')
+      .select('lawyer_id')
+      .in('status', ['active', 'paid']);
+    if (data) {
+      setBusyLawyerIds(new Set(data.map(c => c.lawyer_id)));
+    }
+  };
   const fetchLawyers = async () => {
     const { data: lawyerData, error } = await supabase
       .from('lawyer_profiles')
       .select('*')
-      .order('is_available', { ascending: false })
+      // .order('is_available', { ascending: false })     // this will show both offline and online lawyers
+      .eq('is_available', true) // only available lawyers
       .order('rating', { ascending: false });
 
     if (error) {
@@ -164,8 +176,16 @@ const Lawyers = () => {
     }
     return result;
   }, [lawyers, searchQuery, categoryFilter, minRating, minExperience, maxPrice, selectedSpecializations, selectedLanguages, onlineOnly, sortBy]);
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, categoryFilter, minRating, minExperience, maxPrice, selectedSpecializations, selectedLanguages, onlineOnly, sortBy]);
+  const totalPages = Math.ceil(filteredAndSortedLawyers.length / LAWYERS_PER_PAGE);
+  const paginatedLawyers = filteredAndSortedLawyers.slice(
+    (currentPage - 1) * LAWYERS_PER_PAGE,
+    currentPage * LAWYERS_PER_PAGE
+  );
   const onlineLawyers = filteredAndSortedLawyers.filter(l => l.is_available);
-  const offlineLawyers = filteredAndSortedLawyers.filter(l => !l.is_available);
   const clearAllFilters = () => {
     setSearchQuery('');
     setMinRating(0);
@@ -183,9 +203,22 @@ const Lawyers = () => {
   const toggleLanguage = (lang: string) => {
     setSelectedLanguages(prev => prev.includes(lang) ? prev.filter(l => l !== lang) : [...prev, lang]);
   };
-
+  const getPageNumbers = () => {
+    const pages: (number | 'ellipsis')[] = [];
+    if (totalPages <= 5) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (currentPage > 3) pages.push('ellipsis');
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+      for (let i = start; i <= end; i++) pages.push(i);
+      if (currentPage < totalPages - 2) pages.push('ellipsis');
+      pages.push(totalPages);
+    }
+    return pages;
+  };
   return (
-    // <MainLayout> 
     <ClientLayout>
       <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background">
         {/* Hero Header */}
@@ -367,7 +400,6 @@ const Lawyers = () => {
             )}
             {/* Active Filter Badges */}
             {(categoryFilter || activeFilterCount > 0) && !showFilters && (
-              // <div className="mt-4 flex flex-wrap items-center gap-2">
               <div className="mt-4 flex flex-wrap items-center gap-2 animate-fade-in">
                 <span className="text-sm text-muted-foreground">Active:</span>
                 {categoryFilter && (
@@ -394,10 +426,11 @@ const Lawyers = () => {
         </div>
 
         {/* Lawyers Grid */}
-        <div className="container mx-auto px-4 py-8 md:py-12">
+
+        <div className="container mx-auto px-4 sm:px-6 py-8 md:py-12">
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[...Array(6)].map((_, i) => (
+              {[...Array(5)].map((_, i) => (
                 <div key={i} className="bg-card rounded-2xl overflow-hidden border border-border">
                   <div className="p-6">
                     <div className="flex gap-4">
@@ -429,42 +462,81 @@ const Lawyers = () => {
           ) : (
             <>
               {/* Online Lawyers Section */}
-              {onlineLawyers.length > 0 && (
-                <div className="mb-12">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="flex items-center gap-2 bg-emerald-500/10 text-emerald-600 px-4 py-2 rounded-full">
 
-                      <span className="relative flex h-2.5 w-2.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                      </span>
-                      <span className="font-medium text-sm">Available Now | {onlineLawyers.length} lawyer{onlineLawyers.length !== 1 ? 's' : ''}</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 md:gap-6 items-stretch">
+                {paginatedLawyers.map((lawyer, i) => (
+                  <div
+                    key={lawyer.id}
+                    className="animate-scale-in h-full flex"
+                    style={{
+                      animationDelay: `${i * 0.06}s`,
+                      animationFillMode: 'both'
+                    }}
+                  >
+                    <div className="w-full h-full flex">
+                      <LawyerCard
+                        lawyer={lawyer}
+                        isBusy={busyLawyerIds.has(lawyer.user_id)}
+                      />
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {onlineLawyers.map((lawyer) => <LawyerCard key={lawyer.id} lawyer={lawyer} />)}
+                ))}
+              </div>
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="mt-8 md:mt-12 animate-fade-in">
 
-                  </div>
-                </div>
-              )}
+                  <div className="flex flex-col items-center justify-center gap-6">
+                    {/* Page info */}
 
-              {/* Offline Lawyers Section */}
-              {offlineLawyers.length > 0 && (
-                <div>
-                  {onlineLawyers.length > 0 && (
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="flex items-center gap-2 bg-muted px-4 py-2 rounded-full">
-
-                        <span className="w-2.5 h-2.5 rounded-full bg-muted-foreground"></span>
-                        <span className="font-medium text-sm text-muted-foreground">Currently Offline</span>
-
+                    <p className="text-sm text-muted-foreground text-center">
+                      Showing {(currentPage - 1) * LAWYERS_PER_PAGE + 1}–{Math.min(currentPage * LAWYERS_PER_PAGE, filteredAndSortedLawyers.length)} of {filteredAndSortedLawyers.length} lawyers
+                    </p>
+                    {/* Pagination controls */}
+                    <nav
+                      className="flex flex-wrap items-center justify-center gap-2"
+                      aria-label="Pagination"
+                    >
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={currentPage === 1}
+                        onClick={() => { setCurrentPage(p => p - 1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                        className="gap-1 h-9 px-3 text-xs sm:text-sm"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        <span className="hidden sm:inline">Previous</span>
+                      </Button>
+                      <div className="flex items-center gap-1">
+                        {getPageNumbers().map((page, idx) =>
+                          page === 'ellipsis' ? (
+                            <span key={`ellipsis-${idx}`} className="w-9 h-9 flex items-center justify-center text-muted-foreground text-sm">
+                              …
+                            </span>
+                          ) : (
+                            <Button
+                              key={page}
+                              variant={currentPage === page ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => { setCurrentPage(page); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                              className={`w-9 h-9 p-0 text-xs sm:text-sm ${currentPage === page ? 'pointer-events-none' : ''}`}
+                            >
+                              {page}
+                            </Button>
+                          )
+                        )}
                       </div>
-                      <span className="text-muted-foreground text-sm">{offlineLawyers.length} lawyer{offlineLawyers.length !== 1 ? 's' : ''}</span>
-
-                    </div>
-                  )}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {offlineLawyers.map((lawyer) => <LawyerCard key={lawyer.id} lawyer={lawyer} />)}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={currentPage === totalPages}
+                        onClick={() => { setCurrentPage(p => p + 1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                        className="gap-1 h-9 px-3 text-xs sm:text-sm"
+                      >
+                        <span className="hidden sm:inline">Next</span>
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </nav>
 
                   </div>
                 </div>
@@ -473,7 +545,6 @@ const Lawyers = () => {
           )}
         </div>
       </div>
-      {/* </MainLayout> */}
     </ClientLayout>
   );
 };

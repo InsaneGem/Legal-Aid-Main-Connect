@@ -965,7 +965,7 @@ const ClientConsultation = () => {
               </div>
             )}
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Booked</span>
+              <span className="text-sm text-muted-foreground">Bookedddd</span>
               <span className="text-sm">
                 {consultation?.created_at ? new Date(consultation.created_at).toLocaleDateString() : '-'}
               </span>

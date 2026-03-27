@@ -13,18 +13,21 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 import {
   User, Mail, Phone, Camera, Save, Shield, ArrowLeft,
   Wallet, MessageSquare, Clock, Activity, Loader2, FileText, Star,
   CalendarIcon,
+  IndianRupee,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { z } from 'zod';
 import { AvatarUpload } from '@/components/profile/AvatarUpload';
 import { ClientLayout } from '@/components/layout/ClientLayout';
 import { profile } from 'console';
+import { useCallRecording } from '@/hooks/useCallRecording';
 const profileSchema = z.object({
   full_name: z.string().trim().min(2, 'Name must be at least 2 characters').max(100, 'Name too long'),
   phone: z.string().trim().max(20, 'Phone number too long').optional().nullable(),
@@ -43,6 +46,7 @@ interface ClientStats {
   pendingConsultations: number;
   completedConsultations: number;
   totalSpent: number;
+  // totalRecordings: number;
 }
 const ClientManageAccount = () => {
   const { user, loading: authLoading } = useAuth();
@@ -50,6 +54,8 @@ const ClientManageAccount = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [recordingsCount, setRecordingsCount] = useState<number>(0);
+  const [completedCount, setCompletedCount] = useState<number>(0);
   const [profile, setProfile] = useState<Profile>({
     full_name: '',
     email: '',
@@ -64,6 +70,9 @@ const ClientManageAccount = () => {
     pendingConsultations: 0,
     completedConsultations: 0,
     totalSpent: 0,
+    // totalRecordings: 0,
+
+
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   useEffect(() => {
@@ -77,9 +86,36 @@ const ClientManageAccount = () => {
   }, [user, authLoading]);
   const fetchAllData = async () => {
     if (!user) return;
-    await Promise.all([fetchProfile(), fetchStats()]);
+    await Promise.all([
+      fetchProfile(),
+      fetchStats(),
+      fetchRecordingsCount()
+    ]);
     setLoading(false);
+
   };
+
+  const fetchRecordingsCount = async () => {
+    if (!user) return;
+    const { data: completedConsults } = await supabase
+      .from('consultations')
+      .select('id')
+      .eq('client_id', user.id)
+      .eq('status', 'completed');
+    setCompletedCount(completedConsults?.length || 0);
+    if (!completedConsults || completedConsults.length === 0) {
+      setRecordingsCount(0);
+      return;
+    }
+    const ids = completedConsults.map(c => c.id);
+    const { count } = await supabase
+      .from('call_recordings')
+      .select('id', { count: 'exact', head: true })
+      .in('consultation_id', ids);
+    setRecordingsCount(count || 0);
+  };
+
+
   const fetchProfile = async () => {
     if (!user) return;
     const { data } = await supabase
@@ -99,20 +135,21 @@ const ClientManageAccount = () => {
   };
   const fetchStats = async () => {
     if (!user) return;
-    const [walletRes, consultRes, transRes] = await Promise.all([
+
+    const [walletRes, consultRes] = await Promise.all([
       supabase.from('wallets').select('balance').eq('user_id', user.id).maybeSingle(),
       supabase.from('consultations').select('status, total_amount').eq('client_id', user.id),
-      supabase.from('transactions').select('amount').eq('user_id', user.id).eq('type', 'consultation_fee'),
     ]);
     const consultations = consultRes.data || [];
-    const transactions = transRes.data || [];
+
     setStats({
       walletBalance: Number(walletRes.data?.balance) || 0,
       totalConsultations: consultations.length,
       activeConsultations: consultations.filter(c => c.status === 'active').length,
       pendingConsultations: consultations.filter(c => c.status === 'pending').length,
       completedConsultations: consultations.filter(c => c.status === 'completed').length,
-      totalSpent: transactions.reduce((sum, t) => sum + Number(t.amount), 0),
+      totalSpent: consultations.reduce((sum, c) => sum + Number(c.total_amount || 0), 0),
+
     });
   };
   const handleSave = async () => {
@@ -148,7 +185,7 @@ const ClientManageAccount = () => {
   };
   if (authLoading || loading) {
     return (
-      //   <MainLayout showFooter={false}>
+
       <ClientLayout>
         <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background">
           <div className="container max-w-4xl mx-auto px-4 py-8">
@@ -157,12 +194,11 @@ const ClientManageAccount = () => {
             <Skeleton className="h-64 rounded-2xl mb-6" />
           </div>
         </div>
-        {/* </MainLayout> */}
+
       </ClientLayout>
     );
   }
   return (
-    // <MainLayout showFooter={false}>
     <ClientLayout>
       <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background">
         <div className="container max-w-4xl mx-auto px-4 py-8">
@@ -188,12 +224,12 @@ const ClientManageAccount = () => {
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="flex items-center gap-3 p-4 rounded-xl bg-secondary/50 border border-border/50">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Wallet className="h-5 w-5 text-primary" />
+                  <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center">
+                    <FileText className="h-5 w-5 text-amber-600" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Wallet Balance</p>
-                    <p className="text-lg font-bold">₹{stats.walletBalance.toFixed(2)}</p>
+                    <p className="text-xs text-muted-foreground">Total Recordings</p>
+                    <p className="text-lg font-bold">{recordingsCount}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 p-4 rounded-xl bg-secondary/50 border border-border/50">
@@ -215,12 +251,13 @@ const ClientManageAccount = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-3 p-4 rounded-xl bg-secondary/50 border border-border/50">
-                  <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center">
-                    <FileText className="h-5 w-5 text-amber-600" />
+                  <div className="w-10 h-10 rounded-full bg-yellow-500/10 flex items-center justify-center">
+
+                    <IndianRupee className="h-5 w-5 text-yellow-500" />
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Total Spent</p>
-                    <p className="text-lg font-bold">${stats.totalSpent.toFixed(2)}</p>
+                    <p className="text-lg font-bold">₹{stats.totalSpent.toFixed(2)}</p>
                   </div>
                 </div>
               </div>
@@ -258,17 +295,7 @@ const ClientManageAccount = () => {
             <CardContent className="space-y-6">
               {/* Avatar Section */}
               <div className="flex items-center gap-6">
-                {/* <div className="relative">
-                  <Avatar className="h-24 w-24 border-4 border-background shadow-lg">
-                    <AvatarImage src={profile.avatar_url || ''} />
-                    <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
-                      {profile.full_name?.charAt(0).toUpperCase() || 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-                  <button className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors">
-                    <Camera className="h-4 w-4" />
-                  </button>
-                </div> */}
+
                 {user && (
                   <AvatarUpload
                     userId={user.id}
@@ -279,11 +306,7 @@ const ClientManageAccount = () => {
                 )}
 
                 <div>
-                  {/* <Button variant="outline" size="sm" className="mb-1">
-                    <Camera className="h-3.5 w-3.5 mr-1.5" />
-                    Change Photo
-                  </Button>
-                  <p className="text-xs text-muted-foreground">JPG, PNG, GIF. Max 5MB.</p> */}
+
                   <h3 className="font-semibold text-lg mt-2">{profile.full_name}</h3>
                   <p className="text-sm text-muted-foreground">{profile.email}</p>
                   <Badge variant="secondary" className="gap-1 mt-1.5">
@@ -372,37 +395,7 @@ const ClientManageAccount = () => {
               </div>
             </CardContent>
           </Card>
-          {/* Quick Links */}
-          <Card className="border-0 shadow-lg mb-6">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Quick Links</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <Button variant="outline" className="justify-start gap-2 h-auto py-3" onClick={() => navigate('/dashboard')}>
-                  <Activity className="h-4 w-4 text-primary" />
-                  <div className="text-left">
-                    <p className="text-sm font-medium">Dashboard</p>
-                    <p className="text-xs text-muted-foreground">View consultations</p>
-                  </div>
-                </Button>
-                <Button variant="outline" className="justify-start gap-2 h-auto py-3" onClick={() => navigate('/lawyers')}>
-                  <User className="h-4 w-4 text-primary" />
-                  <div className="text-left">
-                    <p className="text-sm font-medium">Find Lawyers</p>
-                    <p className="text-xs text-muted-foreground">Browse legal experts</p>
-                  </div>
-                </Button>
-                <Button variant="outline" className="justify-start gap-2 h-auto py-3" onClick={() => navigate('/help')}>
-                  <MessageSquare className="h-4 w-4 text-primary" />
-                  <div className="text-left">
-                    <p className="text-sm font-medium">Help & Support</p>
-                    <p className="text-xs text-muted-foreground">Get assistance</p>
-                  </div>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+
           {/* Save Button */}
           <div className="flex justify-end gap-4">
             <Button variant="outline" onClick={() => navigate('/dashboard')}>
@@ -424,7 +417,6 @@ const ClientManageAccount = () => {
           </div>
         </div>
       </div>
-      {/* </MainLayout> */}
     </ClientLayout>
   );
 };

@@ -51,15 +51,15 @@ export const LawyerFooter = () => {
             <div className="space-y-3">
               <a href="mailto:lawyers@legalmate.com" className="flex items-center gap-3 text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors">
                 <Mail className="h-4 w-4" />
-                lawyers@legalmate.com
+                insanegem142012@gmail.com
               </a>
               <a href="tel:+18001234567" className="flex items-center gap-3 text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors">
                 <Phone className="h-4 w-4" />
-                +1 (800) 123-4567
+                +91 9281472291
               </a>
               <div className="flex items-center gap-3 text-sm text-primary-foreground/70">
                 <MapPin className="h-4 w-4" />
-                123 Legal Avenue, New York, NY 10001
+                Basavanna Nagar - 560066, Banaglore
               </div>
             </div>
           </div>

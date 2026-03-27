@@ -1,312 +1,3 @@
-// import { useEffect, useState, useRef } from 'react';
-// import { useNavigate } from 'react-router-dom';
-// import { supabase } from '@/integrations/supabase/client';
-// import { useAuth } from '@/contexts/AuthContext';
-// import { useToast } from '@/hooks/use-toast';
-// import { Button } from '@/components/ui/button';
-// import { Badge } from '@/components/ui/badge';
-// import {
-//   MessageSquare, Phone, Video, DollarSign,
-//   User, Clock, X, CheckCircle, Bell, XCircle, FileText
-// } from 'lucide-react';
-
-// interface IncomingRequest {
-//   id: string;
-//   consultationId: string;
-//   clientName: string;
-//   clientAvatar?: string;
-//   type: 'chat' | 'audio' | 'video';
-//   amount: number;
-//   agenda?: string | null;
-//   countdown: number;
-// }
-
-// interface BookingNotificationProviderProps {
-//   children: React.ReactNode;
-// }
-// const parseAgenda = (agenda: string | null | undefined) => {
-//   if (!agenda) return { category: '', urgency: '', details: '' };
-//   const categoryMatch = agenda.match(/^\[(.+?)\]/);
-//   const urgencyMatch = agenda.match(/\]\s*\[(.+?)\]/);
-//   const details = agenda.replace(/^\[.+?\](\s*\[.+?\])*/g, '').replace(/^\n/, '');
-//   return {
-//     category: categoryMatch?.[1] || '',
-//     urgency: urgencyMatch?.[1] || '',
-//     details: details || agenda,
-//   };
-// };
-
-// export const BookingNotificationProvider = ({ children }: BookingNotificationProviderProps) => {
-//   const { user } = useAuth();
-//   const navigate = useNavigate();
-//   const { toast } = useToast();
-//   const [requests, setRequests] = useState<IncomingRequest[]>([]);
-//   const intervalsRef = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
-
-
-//   useEffect(() => {
-//     if (!user) return;
-
-//     // Check if user is a lawyer
-//     const checkLawyerAndSubscribe = async () => {
-//       const { data: lawyerProfile } = await supabase
-//         .from('lawyer_profiles')
-//         .select('user_id')
-//         .eq('user_id', user.id)
-//         .single();
-
-
-//       if (!lawyerProfile) return;
-
-//       const channel = supabase
-//         .channel('lawyer-booking-notifications-global')
-//         .on(
-//           'postgres_changes',
-//           {
-//             event: 'INSERT',
-//             schema: 'public',
-//             table: 'consultations',
-//             filter: `lawyer_id=eq.${user.id}`,
-//           },
-//           async (payload) => {
-//             const consultation = payload.new as any;
-//             if (consultation.status === 'pending') {
-//               const { data: clientProfile } = await supabase
-//                 .from('profiles')
-//                 .select('full_name, avatar_url')
-//                 .eq('id', consultation.client_id)
-//                 .single();
-
-//               const reqId = consultation.id;
-//               const newReq: IncomingRequest = {
-//                 id: reqId,
-//                 consultationId: consultation.id,
-//                 clientName: clientProfile?.full_name || 'Client',
-//                 clientAvatar: clientProfile?.avatar_url || undefined,
-//                 type: consultation.type,
-//                 amount: consultation.total_amount || 0,
-//                 agenda: consultation.agenda,
-//                 countdown: 60,
-//               };
-
-//               setRequests(prev => [newReq, ...prev]);
-//               // Start countdown
-//               const interval = setInterval(() => {
-//                 setRequests(prev => {
-//                   const updated = prev.map(r => {
-//                     if (r.id === reqId) {
-//                       if (r.countdown <= 1) {
-//                         // Auto-expire
-//                         clearInterval(intervalsRef.current.get(reqId)!);
-//                         intervalsRef.current.delete(reqId);
-//                         return null;
-//                       }
-//                       return { ...r, countdown: r.countdown - 1 };
-//                     }
-//                     return r;
-//                   }).filter(Boolean) as IncomingRequest[];
-//                   return updated;
-//                 });
-//               }, 1000);
-//               intervalsRef.current.set(reqId, interval);
-//               // Browser notification
-//               try {
-//                 if (Notification.permission === 'granted') {
-//                   new Notification('🔔 New Consultation Request!', {
-//                     body: `${clientProfile?.full_name || 'A client'} wants a ${consultation.type} consultation`,
-//                     icon: '/favicon.svg',
-//                     tag: 'new-booking',
-//                   });
-//                 }
-//               } catch { }
-//               // Play sound
-//               try {
-//                 const audio = new Audio('/notification.mp3');
-//                 audio.volume = 0.5;
-//                 audio.play().catch(() => { });
-//               } catch { }
-
-//               // Browser notification
-//               // if (Notification.permission === 'granted') {
-//               //   new Notification('💰 New Paid Booking!', {
-//               //     body: `${clientProfile?.full_name || 'A client'} paid $${consultation.total_amount} for a ${consultation.type} consultation`,
-//               //     icon: '/favicon.ico',
-//               //     tag: 'new-booking',
-//               //   });
-//               // }
-//             }
-//           }
-//         )
-//         .subscribe();
-
-//       // Request notification permission
-//       if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
-//         Notification.requestPermission();
-//       }
-
-//       return () => {
-//         supabase.removeChannel(channel);
-//         intervalsRef.current.forEach(interval => clearInterval(interval));
-//         intervalsRef.current.clear();
-//       };
-//     };
-
-//     const cleanup = checkLawyerAndSubscribe();
-//     return () => { cleanup.then(fn => fn?.()); };
-//   }, [user]);
-
-//   const dismissRequest = (id: string) => {
-//     if (intervalsRef.current.has(id)) {
-//       clearInterval(intervalsRef.current.get(id)!);
-//       intervalsRef.current.delete(id);
-//     }
-//     setRequests(prev => prev.filter(r => r.id !== id));
-//   };
-//   const handleAccept = async (req: IncomingRequest) => {
-//     const { error } = await supabase
-//       .from('consultations')
-//       .update({ status: 'active', started_at: new Date().toISOString() })
-//       .eq('id', req.consultationId);
-//     if (!error) {
-//       toast({
-//         title: '✅ Accepted!',
-//         description: 'Waiting for client payment. Redirecting to consultation...',
-//       });
-//       dismissRequest(req.id);
-//       navigate(`/consultation/${req.consultationId}`);
-//     }
-//   };
-//   const handleReject = async (req: IncomingRequest) => {
-//     await supabase
-//       .from('consultations')
-//       .update({ status: 'cancelled' })
-//       .eq('id', req.consultationId);
-//     toast({ title: '❌ Declined', description: 'The client has been notified.' });
-//     dismissRequest(req.id);
-//   };
-
-//   const getTypeIcon = (type: string) => {
-//     switch (type) {
-//       case 'video': return <Video className="h-4 w-4" />;
-//       case 'audio': return <Phone className="h-4 w-4" />;
-//       default: return <MessageSquare className="h-4 w-4" />;
-//     }
-//   };
-
-//   const getTypeColor = (type: string) => {
-//     switch (type) {
-//       case 'video': return 'bg-purple-500/10 text-purple-600 border-purple-500/20';
-//       case 'audio': return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
-//       default: return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20';
-//     }
-//   };
-
-//   return (
-//     <>
-//       {children}
-
-//       {/* Floating Notifications - fixed position, no layout shift */}
-//       <div className="fixed top-20 right-4 z-[100] space-y-3 max-w-sm pointer-events-none">
-//         {requests.map((req) => {
-//           const { category, urgency, details } = parseAgenda(req.agenda);
-//           return (
-//             <div
-//               key={req.id}
-//               className="pointer-events-auto bg-card border border-border rounded-xl shadow-2xl overflow-hidden animate-in slide-in-from-right-5 duration-300"
-//             >
-//               {/* Header */}
-//               <div className="bg-primary px-4 py-2 flex items-center justify-between">
-//                 <div className="flex items-center gap-2 text-primary-foreground">
-//                   <Bell className="h-4 w-4 animate-bounce" />
-//                   <span className="font-medium text-sm">New Request!</span>
-//                 </div>
-//                 <div className="flex items-center gap-2">
-//                   <span className={`text-xs font-bold ${req.countdown <= 10 ? 'text-red-300' : 'text-primary-foreground/80'}`}>
-//                     {req.countdown}s
-//                   </span>
-//                   <button
-//                     onClick={() => { handleReject(req); }}
-//                     className="text-primary-foreground/70 hover:text-primary-foreground"
-//                   >
-//                     <X className="h-4 w-4" />
-//                   </button>
-//                 </div>
-//               </div>
-//               {/* Countdown bar */}
-//               <div className="h-1 bg-muted">
-//                 <div
-//                   className={`h-full transition-all duration-1000 ease-linear ${req.countdown <= 10 ? 'bg-red-500' : 'bg-primary'}`}
-//                   style={{ width: `${(req.countdown / 60) * 100}%` }}
-//                 />
-//               </div>
-//               {/* Content */}
-//               <div className="p-4 space-y-3">
-//                 {/* Client info */}
-//                 <div className="flex items-center gap-3">
-//                   <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center overflow-hidden flex-shrink-0">
-//                     {req.clientAvatar ? (
-//                       <img src={req.clientAvatar} alt={req.clientName} className="w-full h-full object-cover" />
-//                     ) : (
-//                       <User className="h-5 w-5 text-muted-foreground" />
-//                     )}
-//                   </div>
-//                   <div className="flex-1 min-w-0">
-//                     <p className="font-semibold text-sm truncate">{req.clientName}</p>
-//                     <div className="flex items-center gap-2 mt-0.5">
-//                       <Badge className={`text-xs ${getTypeColor(req.type)}`}>
-//                         {getTypeIcon(req.type)}
-//                         <span className="ml-1 capitalize">{req.type}</span>
-//                       </Badge>
-//                       <span className="text-xs font-medium text-primary">₹{req.amount}</span>
-//                     </div>
-
-//                   </div>
-//                   {/* Agenda summary */}
-//                   {req.agenda && (
-//                     <div className="p-2.5 bg-secondary/50 rounded-lg border text-xs space-y-1">
-//                       <p className="font-medium text-muted-foreground flex items-center gap-1">
-//                         <FileText className="h-3 w-3" /> Agenda
-//                       </p>
-//                       <div className="flex flex-wrap gap-1">
-//                         {category && <Badge variant="outline" className="text-[10px] h-5">{category}</Badge>}
-//                         {urgency && <Badge variant="outline" className="text-[10px] h-5">{urgency}</Badge>}
-//                       </div>
-//                       {details && <p className="text-foreground line-clamp-2">{details}</p>}
-//                     </div>
-//                   )}
-//                   {/* Actions */}
-//                   <div className="flex gap-2">
-//                     <Button
-//                       size="sm"
-//                       variant="outline"
-//                       className="flex-1 gap-1 text-xs hover:bg-red-500/10 hover:text-red-600 hover:border-red-500/30"
-//                       onClick={() => handleReject(req)}
-//                     >
-//                       <XCircle className="h-3.5 w-3.5" />
-//                       Decline
-//                     </Button>
-//                     <Button
-//                       size="sm"
-//                       className="flex-1 gap-1 text-xs"
-//                       onClick={() => handleAccept(req)}
-//                     >
-//                       <CheckCircle className="h-3.5 w-3.5" />
-//                       Accept
-//                     </Button>
-//                   </div>
-//                 </div>
-//               </div>
-
-
-//             </div>
-//           );
-//         })}
-//       </div>
-//     </>
-//   );
-// };
-
-
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -334,6 +25,7 @@ interface IncomingRequest {
   amount: number;
   agenda?: string | null;
   countdown: number;
+  statusMessage?: string;
 }
 
 interface BookingNotificationProviderProps {
@@ -386,7 +78,7 @@ export const BookingNotificationProvider = ({ children }: BookingNotificationPro
         .on(
           'postgres_changes',
           {
-            event: 'INSERT',
+            event: '*', // ✅ IMPORTANT: listen to INSERT + UPDATE
             schema: 'public',
             table: 'consultations',
             filter: `lawyer_id=eq.${user.id}`,
@@ -395,7 +87,13 @@ export const BookingNotificationProvider = ({ children }: BookingNotificationPro
 
             const consultation = payload.new as any;
 
-            if (consultation.status === 'pending') {
+            // =========================
+            // ✅ NEW REQUEST (INSERT)
+            // =========================
+            if (
+              payload.eventType === 'INSERT' &&
+              consultation.status === 'pending'
+            ) {
 
               const { data: clientProfile } = await supabase
                 .from('profiles')
@@ -418,6 +116,7 @@ export const BookingNotificationProvider = ({ children }: BookingNotificationPro
 
               setRequests(prev => [newReq, ...prev]);
 
+              // ⏱ countdown logic (unchanged)
               const interval = setInterval(() => {
 
                 setRequests(prev => {
@@ -447,28 +146,65 @@ export const BookingNotificationProvider = ({ children }: BookingNotificationPro
 
               intervalsRef.current.set(reqId, interval);
 
+              // 🔔 sound
               try {
                 const audio = new Audio('/notification.mp3');
                 audio.volume = 0.5;
                 audio.play().catch(() => { });
               } catch { }
 
+              // 🔔 browser notification
               if (Notification.permission === 'granted') {
                 new Notification('New Consultation Request', {
                   body: `${clientProfile?.full_name || 'Client'} requested ${consultation.type} consultation`
                 });
               }
+            }
 
+            // =========================
+            // ❌ CLIENT CANCELLED (UPDATE)
+            // =========================
+            if (payload.eventType === 'UPDATE') {
+
+              // 🔥 remove instantly if cancelled
+              if (consultation.status === 'cancelled') {
+                if (intervalsRef.current.has(consultation.id)) {
+                  clearInterval(intervalsRef.current.get(consultation.id)!);
+                  intervalsRef.current.delete(consultation.id);
+                }
+
+                // 2. Show message instead of removing
+                setRequests(prev =>
+                  prev.map(r =>
+                    r.id === consultation.id
+                      ? { ...r, statusMessage: 'Client changed their mind' }
+                      : r
+                  )
+                );
+
+                // 3. Remove after 3 seconds
+                setTimeout(() => {
+                  setRequests(prev => prev.filter(r => r.id !== consultation.id));
+                }, 3000);
+              }
+
+              // 🔥 also remove if already accepted
+              if (consultation.accepted_at) {
+                dismissRequest(consultation.id);
+              }
             }
 
           }
         )
         .subscribe();
 
+
+      // 🔔 request permission
       if (Notification.permission === 'default') {
         Notification.requestPermission();
       }
 
+      // 🧹 cleanup
       return () => {
         supabase.removeChannel(channel);
       };
@@ -478,6 +214,7 @@ export const BookingNotificationProvider = ({ children }: BookingNotificationPro
     const cleanup = checkLawyerAndSubscribe();
     return () => { cleanup.then(fn => fn?.()); };
   }, [user]);
+
   // Also listen for cancellation of pending consultations (client cancelled while waiting)
   useEffect(() => {
     if (!user) return;
@@ -518,25 +255,34 @@ export const BookingNotificationProvider = ({ children }: BookingNotificationPro
 
   const handleAccept = async (req: IncomingRequest) => {
 
-    const { error } = await supabase
+    const now = new Date().toISOString();
+
+    // 1. Send signal (keep it)
+    await supabase.from('call_signals').insert({
+      consultation_id: req.consultationId,
+      sender_id: user.id,
+      type: 'lawyer-accepted',
+      data: {}
+    });
+
+    // 2. 🔥 UPDATE CONSULTATION (THIS IS THE REAL FIX)
+    await supabase
       .from('consultations')
       .update({
-        status: 'active',
-        started_at: new Date().toISOString()
+        status: 'pending',
+        started_at: null,
+        accepted_at: now   // ✅ IMPORTANT
       })
       .eq('id', req.consultationId);
 
-    if (!error) {
+    toast({
+      title: 'Accepted',
+      description: 'Waiting for client payment...'
+    });
 
-      toast({
-        title: 'Accepted',
-        description: 'Opening consultation...'
-      });
+    dismissRequest(req.id);
 
-      dismissRequest(req.id);
-      navigate(`/consultation/${req.consultationId}`);
-    }
-
+    navigate(`/consultation/${req.consultationId}`);
   };
 
   const handleReject = async (req: IncomingRequest) => {
@@ -588,6 +334,7 @@ export const BookingNotificationProvider = ({ children }: BookingNotificationPro
               >
 
                 {/* SMALL CARD */}
+
 
                 {expanded !== req.id && (
 
@@ -724,20 +471,17 @@ export const BookingNotificationProvider = ({ children }: BookingNotificationPro
                           {category && (
                             <Badge variant="outline">{category}</Badge>
                           )}
-
-                          {urgency && (
-                            <Badge variant="outline">{urgency}</Badge>
-                          )}
-
                         </div>
 
-                        <p className="text-muted-foreground">
-                          {details}
-                        </p>
-
+                        {req.statusMessage && (
+                          <p className="text-xs text-red-400 mt-1 flex justify-center">
+                            {req.statusMessage}
+                          </p>
+                        )}
                       </div>
 
                     )}
+
 
                     {/* ACTIONS */}
 
@@ -747,6 +491,7 @@ export const BookingNotificationProvider = ({ children }: BookingNotificationPro
                         variant="outline"
                         className="flex-1"
                         onClick={() => handleReject(req)}
+                        disabled={!!req.statusMessage}
                       >
                         <XCircle className="h-4 w-4 mr-2" />
                         Reject
@@ -755,9 +500,10 @@ export const BookingNotificationProvider = ({ children }: BookingNotificationPro
                       <Button
                         className="flex-1"
                         onClick={() => handleAccept(req)}
+                        disabled={!!req.statusMessage}
                       >
                         <CheckCircle className="h-4 w-4 mr-2" />
-                        Accept
+                        Acceptt
                       </Button>
 
                     </div>

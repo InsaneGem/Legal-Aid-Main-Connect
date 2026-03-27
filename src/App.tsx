@@ -39,12 +39,20 @@ import Refund from "./pages/Refund";
 import ClientLawyerDetail from "./pages/ClientLawyerDetail";
 import ConsultationHistory from "./pages/dashboard/ClientConsultationhistory";
 import ClientConsultation from "./pages/consultation/ClientConsultation";
-import LawyerConsultation from "./pages/consultation/LawyerConsultation";
+// import LawyerConsultation from "./pages/consultation/LawyerConsultation";
 import SavedLawyers from "./pages/SavedLawyers";
 import ClientActiveSessions from "./pages/dashboard/ClientActiveSessions";
 import ClientProcessing from "./pages/dashboard/ClientProcessing";
 import ClientPayments from "./pages/dashboard/ClientPayments";
 import ClientTransactionHistory from "./pages/dashboard/ClientTransactionHistory";
+import ClientRecordings from "./pages/dashboard/ClientRecordings";
+import LawyerActiveSessions from "./pages/dashboard/LawyerActiveSessions";
+
+
+
+
+// import { ScrollToTop } from "./components/context/ScrollToTop";
+import { ScrollToTop } from './contexts/ScrollToTop';
 
 
 const queryClient = new QueryClient();
@@ -58,6 +66,7 @@ const App = () => (
         ⚠️ This website is under process — you may experience some issues. This is basically a trial and error mode. Thank you for your patience!
       </div>
       <BrowserRouter>
+        <ScrollToTop />
         <AuthProvider>
           <CallNotificationProvider>
             <BookingNotificationProvider>
@@ -70,6 +79,7 @@ const App = () => (
                 <Route path="/lawyers" element={<Lawyers />} />
                 <Route path="/lawyer/:id" element={<LawyerProfile />} />
                 <Route path="/lawyer/earnings" element={<LawyerEarnings />} />
+                {/* <Route path="#" element={<LawyerConsultations />} /> */}
                 <Route path="/lawyer/consultations" element={<LawyerConsultations />} />
                 <Route path="/lawyer/rating" element={<LawyerRating />} />
                 <Route path="/lawyer/pending-requests" element={<LawyerPendingRequests />} />
@@ -79,7 +89,7 @@ const App = () => (
                 <Route path="/lawyer/profile-setup" element={<LawyerOnboarding />} />
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/dashboard/admin" element={<AdminDashboard />} />
-                <Route path="/consultation/:id" element={<Consultation />} />
+
                 <Route path="/settings" element={<ProfileSettings />} />
                 <Route path="/know-your-rights" element={<KnowYourRights />} />
                 <Route path="/consumer-protection" element={<ConsumerProtection />} />
@@ -95,12 +105,15 @@ const App = () => (
                 <Route path="/refund" element={<Refund />} />
                 <Route path="/lawyersCard/:id" element={<ClientLawyerDetail />} />
                 <Route path="/consultation-history" element={<ConsultationHistory />} />
-                <Route path="/client/consultation/:id" element={<ClientConsultation />} />
-                <Route path="/lawyer/consultation/:id" element={<LawyerConsultation />} />
+                {/* <Route path="/client/consultation/:id" element={<ClientConsultation />} /> */}
+                {/* <Route path="#/:id" element={<LawyerConsultation />} /> */}
+                <Route path="/consultation/:id" element={<Consultation />} />
                 <Route path="/dashboard/active-sessions" element={<ClientActiveSessions />} />
+                <Route path="/dashboard/lawyer-active-sessions" element={<LawyerActiveSessions />} />
                 <Route path="/dashboard/processing" element={<ClientProcessing />} />
                 <Route path="/dashboard/payments" element={<ClientPayments />} />
                 <Route path="/dashboard/transactions" element={<ClientTransactionHistory />} />
+                <Route path="/dashboard/recordings" element={<ClientRecordings />} />
 
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />

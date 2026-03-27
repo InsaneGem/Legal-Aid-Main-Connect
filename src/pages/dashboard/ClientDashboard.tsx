@@ -12,7 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   Wallet, MessageSquare, Clock, Plus, History, User, Video, Phone,
   TrendingUp, Calendar, ArrowRight, Zap, Shield, Activity, Settings,
-  Search, Users, Star, Heart,
+  Search, Users, Star, Heart, FileVideo,
   Lock,
   CreditCard,
   BadgeCheck,
@@ -37,7 +37,7 @@ interface ConsultationWithLawyer {
   status: 'pending' | 'active' | 'completed' | 'cancelled';
   created_at: string;
   total_amount: number | null;
-  ended_at: string | null;
+  ended_at?: string | null;
   started_at: string | null;
   duration_minutes: number | null;
   lawyer_id: string;
@@ -83,14 +83,15 @@ const ClientDashboard = () => {
   const { toast } = useToast();
   const [walletBalance, setWalletBalance] = useState<number>(0);
   const [consultations, setConsultations] = useState<ConsultationWithLawyer[]>([]);
+  const [totalConsultations, setTotalConsultations] = useState<number>(0);
   const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
   const [lawyers, setLawyers] = useState<LawyerWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
-  // const [profile, setProfile] = useState<{ full_name: string } | null>(null);
   const [profile, setProfile] = useState<{ full_name: string; avatar_url: string | null } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [payingConsultationId, setPayingConsultationId] = useState<string | null>(null);
-
+  const [recordingsCount, setRecordingsCount] = useState<number>(0);
+  const [completedCount, setCompletedCount] = useState<number>(0);
   const [showMore, setShowMore] = useState({
     active: false,
     accepted: false,
@@ -154,11 +155,30 @@ const ClientDashboard = () => {
       fetchConsultations(),
       fetchLawyers(),
       fetchTransactions(),
+      fetchRecordingsCount(),
     ]);
 
     setLoading(false);
   };
-
+  const fetchRecordingsCount = async () => {
+    if (!user) return;
+    const { data: completedConsults } = await supabase
+      .from('consultations')
+      .select('id')
+      .eq('client_id', user.id)
+      .eq('status', 'completed');
+    setCompletedCount(completedConsults?.length || 0);
+    if (!completedConsults || completedConsults.length === 0) {
+      setRecordingsCount(0);
+      return;
+    }
+    const ids = completedConsults.map(c => c.id);
+    const { count } = await supabase
+      .from('call_recordings')
+      .select('id', { count: 'exact', head: true })
+      .in('consultation_id', ids);
+    setRecordingsCount(count || 0);
+  };
   const fetchProfile = async () => {
     if (!user) return;
     const { data: profileData } = await supabase
@@ -169,7 +189,11 @@ const ClientDashboard = () => {
       .maybeSingle();
     if (profileData) setProfile(profileData);
   };
-
+  const stats = {
+    total: consultations.length,
+    completed: consultations.filter(c => c.status === 'completed').length,
+    totalSpent: consultations.reduce((sum, c) => sum + (c.total_amount || 0), 0),
+  };
   const fetchWallet = async () => {
     if (!user) return;
     const { data: walletData } = await supabase
@@ -217,6 +241,17 @@ const ClientDashboard = () => {
   const fetchConsultations = async () => {
     if (!user) return;
 
+    // 🔥 Get TOTAL COUNT (separate query)
+    const { count } = await supabase
+      .from('consultations')
+      .select('*', { count: 'exact', head: true })
+      .eq('client_id', user.id);
+
+    if (count !== null) {
+      setTotalConsultations(count);
+    }
+
+    // 🔥 Fetch latest consultations for UI (keep limit for cards)
     const { data: consultationsData } = await supabase
       .from('consultations')
       .select('id, type, status, created_at, total_amount, lawyer_id, started_at, duration_minutes, agenda, payment_status')
@@ -243,7 +278,6 @@ const ClientDashboard = () => {
         return {
           ...consultation,
           lawyer_profile: lawyerProfile || undefined,
-          // lawyer_name: lawyerName?.full_name || 'Legal Professional',
           lawyer_name: formatLawyerName(lawyerName?.full_name),
           lawyer_avatar: lawyerName?.avatar_url || null
         };
@@ -254,6 +288,7 @@ const ClientDashboard = () => {
       setConsultations([]);
     }
   };
+
 
   const fetchLawyers = async () => {
     const { data: lawyerData, error } = await supabase
@@ -439,25 +474,21 @@ const ClientDashboard = () => {
                   manage legal consultations, track cases, and store important legal
                   documents safely.
                 </p>
-                {/* <Button
-                  variant="outline"
-                  onClick={() => navigate('/saved-lawyers')}
-                  className="gap-2"
-                >
-                  <Heart className="h-4 w-4" />
-                  <span className="hidden sm:inline">Saved</span>
-                </Button> */}
+
               </div>
 
             </div>
 
           </div>
 
+          {/* ****************************************************************** */}
+
+
 
           {/* Stats Grid */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-10">
 
-            {/* Wallet Balance */}
+            {/* Transaction */}
             <Card
               onClick={() => navigate("/dashboard/transactions")}
               className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-primary to-accent">
@@ -515,11 +546,6 @@ const ClientDashboard = () => {
                     </p>
 
                   </div>
-
-                  {/* <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
-                    <Clock className="h-4 w-4 sm:h-6 sm:w-6 text-blue-600" />
-                  </div> */}
-
                 </div>
               </CardContent>
             </Card>
@@ -531,38 +557,26 @@ const ClientDashboard = () => {
             >
               <CardContent className="p-3 sm:p-5">
                 <div className="flex items-start justify-between gap-2">
-
                   <div className="flex-1 space-y-1">
-
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium whitespace-nowrap">
-                        <span>Total Consultations</span>
+                        <span>Consultations</span>
                       </div>
-
                       <span className="text-xl sm:text-3xl font-bold leading-none">
-                        {activeConsultations.length}
+                        {totalConsultations}
                       </span>
                     </div>
-
                     <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1">
                       <TrendingUp className="h-3 w-3 text-emerald-500" />
                       All time
                     </p>
-
                     <p className="text-[10px] text-muted-foreground">
                       • Includes completed & active sessions
                     </p>
-
                     <p className="text-[10px] text-muted-foreground whitespace-nowrap">
-                      • Last updated just now
+                      • Consultation History
                     </p>
-
                   </div>
-
-                  {/* <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
-                    <MessageSquare className="h-4 w-4 sm:h-6 sm:w-6 text-emerald-600" />
-                  </div> */}
-
                 </div>
               </CardContent>
             </Card>
@@ -602,9 +616,6 @@ const ClientDashboard = () => {
 
                   </div>
 
-                  {/* <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
-                    <Users className="h-4 w-4 sm:h-6 sm:w-6 text-emerald-600" />
-                  </div> */}
 
                 </div>
               </CardContent>
@@ -617,46 +628,32 @@ const ClientDashboard = () => {
             >
               <CardContent className="p-3 sm:p-5">
                 <div className="flex items-start justify-between gap-2">
-
                   <div className="flex-1 space-y-1">
-
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium whitespace-nowrap">
-
                         {pendingConsultations.length > 0 && (
                           <span className="relative flex h-2.5 w-2.5">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
                           </span>
                         )}
-
                         <span>Processing</span>
                       </div>
-
                       <span className="text-xl sm:text-3xl font-bold leading-none">
                         {pendingConsultations.length}
                       </span>
                     </div>
-
                     <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1">
                       <Clock className="h-3 w-3 text-amber-500" />
                       Awating for response
                     </p>
-
                     <p className="text-[10px] text-muted-foreground">
-                      • Waiting for Lawyer to confirm your booking
+                      Lawyer consultation requests pending
                     </p>
-
                     <p className="text-[10px] text-muted-foreground whitespace-nowrap">
-                      Click to know more.
+                      Accept or decline in real-time
                     </p>
-
                   </div>
-
-                  {/* <div className="w-8 h-8 sm:h-12 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
-                    <Clock className="h-4 w-4 sm:h-6 sm:w-6 text-amber-600" />
-                  </div> */}
-
                 </div>
               </CardContent>
             </Card>
@@ -703,11 +700,46 @@ const ClientDashboard = () => {
                     </p>
 
                   </div>
-                  {/* 
-                  <div className="w-8 h-8 sm:h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
-                    <CreditCard className="h-4 w-4 sm:h-6 sm:w-6 text-emerald-600" />
-                  </div> */}
 
+
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Recordings */}
+
+            <Card
+              onClick={() => navigate('/dashboard/recordings')}
+              className="group border-0 shadow-md hover:shadow-lg transition-all duration-300 bg-card"
+            >
+              <CardContent className="p-3 sm:p-5">
+                <div className="flex items-start justify-between gap-2">
+
+                  <div className="flex-1 space-y-1">
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium whitespace-nowrap">
+                        <span>Recordings</span>
+                      </div>
+
+                      <span className="text-xl sm:text-3xl font-bold leading-none">
+                        {recordingsCount}
+                      </span>
+                    </div>
+
+                    <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1">
+                      <FileText className="h-3 w-3 text-amber-500" />
+                      Saved Recordings
+                    </p>
+
+                    <p className="text-[10px] text-muted-foreground whitespace-nowrap">
+                      • Check All Your recordings
+                    </p>
+                    <p className="text-[10px] text-muted-foreground whitespace-nowrap">
+                      • Chat, Video, Audio
+                    </p>
+
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -756,29 +788,23 @@ const ClientDashboard = () => {
 
                             <div
                               key={consultation.id}
-                              onClick={() => navigate(`/client/consultation/${consultation.id}`)}
+                              onClick={() => navigate(`/consultation/${consultation.id}`)}
                               className="flex items-center justify-between py-2 cursor-pointer hover:bg-blue-500/5 rounded-md px-1"
                             >
-
                               <div className="flex items-center gap-2 min-w-0">
-
                                 <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
                                   <User className="h-3.5 w-3.5 text-primary" />
                                 </div>
-
                                 <div className="min-w-0">
                                   <p className="text-xs font-medium truncate">
                                     {consultation.lawyer_name}
                                   </p>
-
                                   <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                                     {getTypeIcon(consultation.type)}
                                     <span className="capitalize">{consultation.type}</span>
                                   </div>
                                 </div>
-
                               </div>
-
                               <Button size="sm" className="h-7 text-xs px-2">
                                 Continue
                               </Button>
@@ -906,99 +932,11 @@ const ClientDashboard = () => {
 
 
 
-            {/* Pending Requests */}
-            {/* {pendingConsultations.length > 0 && (
-              <Card className="border shadow-sm">
 
-                <CardHeader className="pb-2 pt-3 px-4">
-
-                  <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-                    <Clock className="h-4 w-4 text-amber-600" />
-                    Pending Requests
-                  </CardTitle>
-
-                  <CardDescription className="text-xs">
-                    Awaiting lawyer responseeee
-                  </CardDescription>
-
-                </CardHeader>
-
-                <CardContent className="px-3 pb-3">
-
-                  {(() => {
-
-                    const isMobile = window.innerWidth < 640
-                    const limit = isMobile ? 1 : 2
-
-                    const visible = showMore.pending
-                      ? pendingConsultations
-                      : pendingConsultations.slice(0, limit)
-
-                    const remaining = pendingConsultations.length - limit
-
-
-                    return (
-                      <>
-
-                        <div className="divide-y">
-
-                          {visible.map((c) => (
-
-                            <div
-                              key={c.id}
-                              className="flex items-center justify-between py-2 gap-2 hover:bg-muted/30 rounded-md px-1"
-                            >
-
-                              <div className="flex items-center gap-2 min-w-0">
-
-                                <div className="w-7 h-7 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0">
-                                  <User className="h-3.5 w-3.5 text-amber-600" />
-                                </div>
-
-                                <div className="min-w-0">
-
-                                  <p className="text-xs font-medium truncate">
-                                    {c.lawyer_name}
-                                  </p>
-
-                                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                                    {getTypeIcon(c.type)}
-                                    <span className="capitalize">{c.type}</span>
-                                  </div>
-
-                                </div>
-
-                              </div>
-
-                              <Badge className="text-[9px] px-1.5 py-0.5 bg-amber-500/10 text-amber-600">
-                                Waiting
-                              </Badge>
-
-                            </div>
-
-                          ))}
-
-                        </div>
-
-                        {!showMore.pending && remaining > 0 && (
-                          <button
-                            onClick={() => setShowMore(prev => ({ ...prev, pending: true }))}
-                            className="mt-2 text-xs text-amber-600 hover:underline"
-                          >
-                            Show {remaining} more →
-                          </button>
-                        )}
-
-                      </>
-                    )
-
-                  })()}
-
-                </CardContent>
-              </Card>
-            )} */}
 
           </div>
+
+
 
           {/* Available Lawyers Section */}
           <Card className="mb-8 border-0 shadow-lg">
@@ -1061,49 +999,7 @@ const ClientDashboard = () => {
                         ))}
                       </div>
 
-                      {onlineLawyers.length > 6 && (
-                        <div className="text-center mt-6">
-                          <Button variant="outline" onClick={() => navigate('#')} className="gap-2">
-                            View All {onlineLawyers.length} Online Lawyerssssss
-                            <ArrowRight className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  )}
 
-                  {/* Offline Lawyers */}
-                  {offlineLawyers.length > 0 && (
-                    <div>
-                      {onlineLawyers.length > 0 && (
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="flex items-center gap-2 bg-muted px-3 py-1.5 rounded-full">
-                            <span className="w-2 h-2 rounded-full bg-muted-foreground"></span>
-                            <span className="font-medium text-sm text-muted-foreground">Currently Offline</span>
-                          </div>
-                          <span className="text-muted-foreground text-sm">
-                            {offlineLawyers.length} lawyer{offlineLawyers.length !== 1 ? 's' : ''}
-                          </span>
-                        </div>
-                      )}
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {offlineLawyers.slice(0, 3).map((lawyer) => (
-                          <LawyerCard
-                            key={lawyer.id}
-                            lawyer={lawyer}
-                            showActions={true}
-                            onBooking={fetchDashboardData}
-                          />
-                        ))}
-                      </div>
-                      {offlineLawyers.length > 3 && (
-                        <div className="text-center mt-6">
-                          <Button variant="ghost" onClick={() => navigate('#')} className="gap-2">
-                            View All Lawyers
-                            <ArrowRight className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
                     </div>
                   )}
                 </>
@@ -1146,199 +1042,133 @@ const ClientDashboard = () => {
             </CardHeader>
 
 
-            <CardContent className="pt-0">
+            <CardContent>
               {consultations.length === 0 ? (
-                <div className="text-center py-12 px-4">
-                  <div className="w-16 h-16 rounded-full bg-secondary mx-auto mb-4 flex items-center justify-center">
-                    <MessageSquare className="h-8 w-8 text-muted-foreground" />
+                <div className="text-center py-16 px-4">
+                  <div className="w-20 h-20 rounded-full bg-secondary mx-auto mb-6 flex items-center justify-center">
+                    <MessageSquare className="h-10 w-10 text-muted-foreground" />
                   </div>
-                  <h3 className="text-lg font-semibold mb-2">No Consultations Yet</h3>
-                  <p className="text-muted-foreground text-sm max-w-xs mx-auto mb-4">
-                    Start your first consultation with a verified legal professional
+                  <h3 className="text-xl font-semibold mb-2">No Consultations Yet</h3>
+                  <p className="text-muted-foreground max-w-sm mx-auto mb-6">
+                    Start your first consultation with a verified legal professional today
                   </p>
-                  <Button onClick={() => navigate('/lawyers')} size="sm" className="gap-2">
+                  <Button onClick={() => navigate('/lawyers')} className="gap-2">
                     <Plus className="h-4 w-4" />
                     Find a Lawyer
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <>
+                  <div className={`grid gap-4 
+  ${consultations.length === 1
+                      ? "grid-cols-1 justify-items-center"
+                      : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                    }`}>
 
-                  {consultations.slice(0, 3).map((consultation) => {
+                    {consultations.slice(0, consultations.length === 1 ? 1 : 4).map((consultation) => {
+                      const statusConfig = getStatusConfig(consultation.status);
 
-                    const formattedDate = new Date(consultation.created_at).toLocaleDateString(
-                      "en-US",
-                      { month: "short", day: "numeric", year: "numeric" }
-                    )
 
-                    const formattedTime = consultation.started_at
-                      ? new Date(consultation.started_at).toLocaleTimeString("en-US", {
-                        hour: "2-digit",
-                        minute: "2-digit"
-                      })
-                      : null
 
-                    return (
+                      return (
+                        <div
+                          key={consultation.id}
+                          className="group relative bg-card rounded-2xl border border-border overflow-hidden transition-all duration-300 hover:shadow-xl hover:border-primary/30 cursor-pointer"
+                          // onClick={() => navigate(`/client/consultation/${consultation.id}`)}
+                          onClick={() => navigate(`/consultation/${consultation.id}`)}
+                        >
+                          {/* Status badge */}
+                          <div className="absolute top-3 right-3 z-10">
+                            <Badge className={`${statusConfig.className} text-[10px] font-medium px-2 py-0.5 rounded-full capitalize`}>
+                              {consultation.status}
+                            </Badge>
+                          </div>
 
-                      <div
-                        key={consultation.id}
-                        onClick={() => navigate(`/client/consultation/${consultation.id}`)}
-                        className="
-      w-full
-      border
-      rounded-xl
-      p-4
-      bg-card
-
-      hover:shadow-md
-      hover:-translate-y-[2px]
-
-      transition-all
-      duration-300
-      cursor-pointer
-      "
-                      >
-
-                        {/* TOP ROW */}
-                        <div className="flex items-center justify-between gap-3">
-
-                          <div className="flex items-center gap-3">
-
-                            {/* AVATAR */}
-                            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-
-                              <Avatar className="h-12 w-12">
-                                <AvatarImage src={consultation.lawyer_avatar || undefined} />
-                                <AvatarFallback className="bg-primary/20">
-                                  <User className='h-6 w-6 text-primary' />
-                                </AvatarFallback>
-                              </Avatar>
-
+                          {/* Header */}
+                          <div className="p-4 pb-3">
+                            <div className="flex gap-3">
+                              <div className="w-14 h-14 shrink-0 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center text-lg font-bold border-2 border-background shadow-lg">
+                                <span className="text-primary">{consultation.lawyer_name?.charAt(0).toUpperCase() || 'L'}</span>
+                              </div>
+                              <div className="flex-1 min-w-0 pr-14">
+                                <h3 className="font-semibold text-sm truncate group-hover:text-primary transition-colors">
+                                  {consultation.lawyer_name}
+                                </h3>
+                                <div className="flex items-center gap-1 mt-1">
+                                  <div className="flex items-center gap-1 bg-secondary px-2 py-0.5 rounded-full">
+                                    {getTypeIcon(consultation.type)}
+                                    <span className="text-[11px] font-medium capitalize">{consultation.type}</span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1 mt-1.5 text-[11px] text-muted-foreground">
+                                  <Calendar className="h-3 w-3" />
+                                  <span>{new Date(consultation.created_at).toLocaleDateString()}</span>
+                                </div>
+                              </div>
                             </div>
-
-                            {/* NAME */}
-                            <div>
-
-                              <p className="font-semibold text-sm sm:text-base">
-                                {consultation.lawyer_name}
-                              </p>
-
-                              <p className="text-xs text-muted-foreground">
-                                {consultation.lawyer_profile?.specializations?.[0] ?? "General Law"}
-                              </p>
-
-                            </div>
-
                           </div>
 
-                          {/* STATUS */}
-                          <Badge className="text-xs px-2 py-1 bg-green-100 text-green-700">
-                            {consultation.status}
-                          </Badge>
-
-                        </div>
-
-
-                        {/* DETAILS SECTION */}
-                        <div className="
-      mt-3
-      grid
-      grid-cols-2
-      sm:grid-cols-4
-      gap-2
-      text-xs
-      text-muted-foreground
-      ">
-
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {formattedDate}
-                          </div>
-
-                          <div className="flex items-center gap-1">
-                            {getTypeIcon(consultation.type)}
-                            {consultation.type}
-                          </div>
-
-                          {consultation.duration_minutes && (
-                            <div className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {consultation.duration_minutes} min
+                          {/* Specializations */}
+                          {consultation.lawyer_profile?.specializations && consultation.lawyer_profile.specializations.length > 0 && (
+                            <div className="px-4 pb-2">
+                              <div className="flex flex-wrap gap-1">
+                                {consultation.lawyer_profile.specializations.slice(0, 2).map((spec) => (
+                                  <Badge key={spec} variant="secondary" className="text-[10px] font-normal bg-secondary/80 px-1.5 py-0">{spec}</Badge>
+                                ))}
+                                {consultation.lawyer_profile.specializations.length > 2 && (
+                                  <Badge variant="outline" className="text-[10px] font-normal px-1.5 py-0">+{consultation.lawyer_profile.specializations.length - 2}</Badge>
+                                )}
+                              </div>
                             </div>
                           )}
 
-                          {formattedTime && (
-                            <div className="flex items-center gap-1">
-                              <Activity className="h-3 w-3" />
-                              {formattedTime}
+                          {/* Agenda */}
+                          <div className="px-4 pb-3">
+                            <p className="text-xs text-muted-foreground line-clamp-2 min-h-[2rem]">
+                              {/* {consultation.agenda || consultation.lawyer_profile?.bio || 'Legal consultation session'} */}
+                              Agenda : {(consultation.agenda || consultation.lawyer_profile?.bio || 'Legal consultation session')
+                                ?.replace(/[\[\]]/g, '')}
+                            </p>
+                          </div>
+
+                          {/* Footer */}
+                          <div className="px-4 py-2.5 border-t border-border bg-secondary/20">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1">
+                                <span className="text-lg font-bold">₹{consultation.total_amount?.toFixed(0) || '0'}</span>
+                                <span className="text-[10px] text-muted-foreground">paid</span>
+                              </div>
+                              <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
                             </div>
-                          )}
-
+                          </div>
                         </div>
-
-
-                        {/* BOTTOM ROW */}
-                        <div className="
-      mt-3
-      flex
-      items-center
-      justify-between
-      ">
-
-                          {/* PRICE */}
-                          <span className="text-sm font-medium text-primary">
-                            {consultation.total_amount
-                              ? `₹${consultation.total_amount}`
-                              : "Free"}
-                          </span>
-
-
-                          {/* RATING */}
-                          {consultation.lawyer_profile?.rating && (
-
-                            <div className="flex items-center gap-1 text-sm">
-
-                              <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-
-                              {consultation.lawyer_profile.rating.toFixed(1)}
-
-                            </div>
-
-                          )}
-
-                        </div>
-
-
-                      </div>
-
-                    )
-
-                  })}
-                  {/* View All Button */}
-                  <div className="flex justify-center mt-5">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="
-        flex items-center gap-2
-        px-4 py-2
-        text-sm
-        hover:bg-primary
-        hover:text-white
-        transition-all
-      "
-                      onClick={() => navigate("/consultation-history")}
-                    >
-                      See more...
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
+                      );
+                    })}
                   </div>
-
-                </div>
-
+                  {/* View All Button */}
+                  {consultations.length > 3 && (
+                    <div className="flex justify-center mt-5">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-primary hover:text-white transition-all"
+                        onClick={() => navigate("/consultation-history")}
+                      >
+                        See more...
+                        <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
+
+
+          {/* ***********************************************************************8 */}
+
+          {/* ***********************************************************************8 */}
+
           {/* Platform Trust Indicators */}
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-12">
 

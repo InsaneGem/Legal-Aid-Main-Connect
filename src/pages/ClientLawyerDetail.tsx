@@ -1,603 +1,4 @@
-// import { useEffect, useState } from "react";
-// import { useParams, useNavigate } from "react-router-dom";
-// import { supabase } from "@/integrations/supabase/client";
-// import { ClientLayout } from "@/components/layout/ClientLayout";
-// import { Card, CardContent } from "@/components/ui/card";
-// import { Badge } from "@/components/ui/badge";
-// import { Button } from "@/components/ui/button";
-// import { ArrowLeft, MessageSquare, Star, User, Phone, Video, CreditCard, Clock, ChevronRight } from "lucide-react";
-// import { formatLawyerName } from "@/lib/Lawyer-utils";
-// import { toast } from "@/components/ui/sonner";
-// import { useAuth } from "@/contexts/AuthContext";
-// import { useToast } from "@/components/ui/use-toast";
 
-// interface LawyerData {
-//   id: string;
-//   user_id: string;
-//   bio: string | null;
-//   experience_years: number | null;
-//   specializations: string[] | null;
-//   languages: string[] | null;
-//   price_per_minute: number | null;
-//   rating: number | null;
-//   total_reviews: number | null;
-//   is_available: boolean | null;
-//   status: string | null;
-//   full_name?: string;
-//   avatar_url?: string | null;
-// }
-
-// export default function ClientLawyerDataCard() 
-// {
-//     const { user } = useAuth();
-//     const { toast } = useToast();
-//   const { id } = useParams();
-//   const navigate = useNavigate();
-//   const [lawyer, setLawyer] = useState<LawyerData | null>(null);
-//   const [loading, setLoading] = useState(true);
-//   const [showPaymentModal, setShowPaymentModal] = useState(false);
-//   const [selectedType, setSelectedType] = useState<'chat' | 'audio' | 'video'>('chat');
-
-//   const handleBookClick = (type: 'chat' | 'audio' | 'video', e: React.MouseEvent) => {
-//     e.preventDefault();
-//     e.stopPropagation();
-
-//     if (!user) {
-//       toast({
-//         title: 'Login Required',
-//         description: 'Please login to book a consultation.',
-//         variant: 'destructive',
-//       });
-//       navigate('/login');
-//       return;
-//     }
-
-//     setSelectedType(type);
-//     setShowPaymentModal(true);
-//   };
-
-//   useEffect(() => {
-//     if (id) fetchLawyer();
-//   }, [id]);
-
-
-
-//   const fetchLawyer = async () => {
-//     setLoading(true);
-
-
-//     const { data: profileData } = await supabase
-//       .from("lawyer_profiles")
-//       .select("*")
-//       .eq("user_id", id)
-//       .single();
-
-//     if (!profileData) {
-//       setLoading(false);
-//       return;
-//     }
-
-//     const { data: userProfile } = await supabase
-//       .from("profiles")
-//       .select("full_name, avatar_url")
-//       .eq("id", id)
-//       .single();
-
-//     setLawyer({
-//       ...profileData,
-//       full_name: formatLawyerName(userProfile?.full_name),
-//       avatar_url: userProfile?.avatar_url,
-//     });
-
-//     setLoading(false);
-//   };
-
-//   if (loading) {
-//     return (
-//       <ClientLayout>
-//         <div className="p-10 text-center">Loading lawyer profile...</div>
-//       </ClientLayout>
-//     );
-//   }
-
-//   if (!lawyer) {
-//     return (
-//       <ClientLayout>
-//         <div className="p-10 text-center">Lawyer not found</div>
-//       </ClientLayout>
-//     );
-//   }
-
-//   return (
-//     <ClientLayout>
-//       <div className="container mx-auto px-4 py-8 max-w-4xl">
-
-//         <Button
-//           variant="ghost"
-//           className="mb-6"
-//           onClick={() => navigate(-1)}
-//         >
-//           <ArrowLeft className="h-4 w-4 mr-2" />
-//           Back to Dashboard
-//         </Button>
-
-//         <Card>
-//           <CardContent className="p-8">
-//             <div className="flex flex-col md:flex-row gap-8">
-
-//               {/* Avatar */}
-//               <div className="w-32 h-32 rounded-full bg-primary/10 flex items-center justify-center text-4xl font-semibold shrink-0">
-//                 {lawyer.avatar_url ? (
-//                   <img
-//                     src={lawyer.avatar_url}
-//                     alt="avatar"
-//                     className="w-full h-full rounded-full object-cover"
-//                   />
-//                 ) : (
-//                   <User className="w-12 h-12" />
-//                 )}
-//               </div>
-
-//               {/* Info */}
-//               <div className="flex-1">
-//                 <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
-//                   <div>
-//                     <h1 className="text-3xl font-bold mb-2">
-//                       {lawyer.full_name}
-//                     </h1>
-
-//                     <div className="flex items-center gap-3 text-muted-foreground">
-//                       <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-//                       <span className="font-semibold text-foreground">
-//                         {lawyer.rating?.toFixed(1) || "0.0"}
-//                       </span>
-//                       <span>({lawyer.total_reviews || 0} reviews)</span>
-//                     </div>
-//                   </div>
-
-//                   <Badge variant={lawyer.is_available ? "default" : "secondary"}>
-//                     {lawyer.is_available ? "Available Now" : "Offline"}
-//                   </Badge>
-//                 </div>
-
-//                 {/* Specializations */}
-//                 {lawyer.specializations?.length ? (
-//                   <div className="flex flex-wrap gap-2 mb-4">
-//                     {lawyer.specializations.map((s) => (
-//                       <Badge key={s} variant="outline">
-//                         {s}
-//                       </Badge>
-//                     ))}
-//                   </div>
-//                 ) : null}
-
-//                 {/* Bio */}
-//                 <p className="text-muted-foreground mb-6">
-//                   {lawyer.bio || "No bio provided."}
-//                 </p>
-
-//                 {/* Stats */}
-//                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-
-//                   <div className="text-center p-3 bg-secondary rounded-lg">
-//                     <div className="text-sm font-semibold">
-//                       {lawyer.experience_years || 0} yrs
-//                     </div>
-//                     <div className="text-xs text-muted-foreground">Experience</div>
-//                   </div>
-
-//                   <div className="text-center p-3 bg-secondary rounded-lg">
-//                     <div className="text-sm font-semibold">
-//                       {lawyer.languages?.length || 1}
-//                     </div>
-//                     <div className="text-xs text-muted-foreground">Languages</div>
-//                   </div>
-
-//                   <div className="text-center p-3 bg-secondary rounded-lg">
-//                     <div className="text-sm font-semibold">
-//                       ₹{lawyer.price_per_minute || 0}/min
-//                     </div>
-//                     <div className="text-xs text-muted-foreground">Rate</div>
-//                   </div>
-
-//                   <div className="text-center p-3 bg-secondary rounded-lg">
-//                     <div className="text-sm font-semibold">
-//                       {lawyer.status || "Unknown"}
-//                     </div>
-//                     <div className="text-xs text-muted-foreground">Status</div>
-//                   </div>
-
-//                 </div>
-
-
-
-//               </div>
-//             </div>
-//           </CardContent>
-//         </Card>
-//         <Card>
-//         <CardContent className="p-8">
-//             <div className="flex flex-col md:flex-row gap-8">
-//                 {/* Action Buttons */}
-//                 <div className="px-3 py-2.5 border-t border-border bg-muted/30 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-//              <Button
-//               size="sm"
-//               variant="ghost"
-//               className="h-8 w-8 p-0 hover:bg-emerald-500/10 hover:text-emerald-600"
-//               onClick={(e) => handleBookClick('chat', e)}
-//               title="Chat"
-//              >
-//              <MessageSquare className="h-3.5 w-3.5" />
-//              </Button>
-//              <Button
-//               size="sm"
-//               variant="ghost"
-//               className="h-8 w-8 p-0 hover:bg-blue-500/10 hover:text-blue-600"
-//               onClick={(e) => handleBookClick('audio', e)}
-//               title="Call"
-//              >
-//              <Phone className="h-3.5 w-3.5" />
-//              </Button>
-//              <Button
-//               size="sm"
-//               variant="ghost"
-//               className="h-8 w-8 p-0 hover:bg-purple-500/10 hover:text-purple-600"
-//               onClick={(e) => handleBookClick('video', e)}
-//               title="Video"
-//              >
-//              <Video className="h-3.5 w-3.5" />
-//              </Button>
-//              <Button
-//               size="sm"
-//               className="ml-auto h-8 text-xs gap-1.5 px-3"
-//               onClick={(e) => handleBookClick('video', e)}
-//              >
-//              <CreditCard className="h-3 w-3" />
-//               Book Now
-//              <ChevronRight className="h-3 w-3" />
-//               </Button>
-//             </div>
-//             </div>    
-//         </CardContent>   
-//         </Card>
-
-//                 <Card>
-//                     <CardContent className="p-8">
-//                         <div className="flex items-center gap-4 text-muted-foreground mb-4">
-//                             <Clock className="h-5 w-5" />
-//                             <span className="text-sm">Available: 9am - 6pm, Mon - Fri</span>
-//                         </div>
-//                         <div className="text-sm text-muted-foreground">
-//                             Note: Booking a consultation will require payment. You can choose to pay per minute or a fixed fee for the session.
-//                         </div>
-//                     </CardContent>
-//                 </Card>
-
-
-//       </div>
-//     </ClientLayout>
-//   );
-// }
-
-
-// import { useEffect, useState } from "react";
-// import { useParams, useNavigate } from "react-router-dom";
-// import { supabase } from "@/integrations/supabase/client";
-// import { ClientLayout } from "@/components/layout/ClientLayout";
-// import { Card, CardContent } from "@/components/ui/card";
-// import { Badge } from "@/components/ui/badge";
-// import { Button } from "@/components/ui/button";
-// import {
-//   ArrowLeft,
-//   MessageSquare,
-//   Star,
-//   User,
-//   Phone,
-//   Video,
-//   CreditCard,
-//   Clock,
-//   ChevronRight
-// } from "lucide-react";
-// import { formatLawyerName } from "@/lib/Lawyer-utils";
-// import { useAuth } from "@/contexts/AuthContext";
-// import { useToast } from "@/components/ui/use-toast";
-
-// interface LawyerData {
-//   id: string;
-//   user_id: string;
-//   bio: string | null;
-//   experience_years: number | null;
-//   specializations: string[] | null;
-//   languages: string[] | null;
-//   price_per_minute: number | null;
-//   rating: number | null;
-//   total_reviews: number | null;
-//   is_available: boolean | null;
-//   status: string | null;
-//   full_name?: string;
-//   avatar_url?: string | null;
-// }
-
-// export default function ClientLawyerDataCard() {
-//   const { user } = useAuth();
-//   const { toast } = useToast();
-//   const { id } = useParams();
-//   const navigate = useNavigate();
-
-//   const [lawyer, setLawyer] = useState<LawyerData | null>(null);
-//   const [loading, setLoading] = useState(true);
-//   const [startingConsultation, setStartingConsultation] = useState(false);
-
-//   const handleBookClick = async (
-//     type: "chat" | "audio" | "video",
-//     e: React.MouseEvent
-//   ) => {
-//     e.preventDefault();
-//     e.stopPropagation();
-
-//     if (!user) {
-//       toast({
-//         title: "Login Required",
-//         description: "Please login to book a consultation.",
-//         variant: "destructive"
-//       });
-//       navigate("/login");
-//       return;
-//     }
-
-//     if (!lawyer) return;
-
-//     setStartingConsultation(true);
-
-//     const { data, error } = await supabase
-//       .from("consultations")
-//       .insert({
-//         client_id: user.id,
-//         lawyer_id: lawyer.user_id,
-//         type,
-//         status: "pending"
-//       })
-//       .select()
-//       .single();
-
-//     if (error) {
-//       toast({
-//         title: "Error",
-//         description: "Failed to start consultation.",
-//         variant: "destructive"
-//       });
-//     } else {
-//       navigate(`/consultation/${data.id}`);
-//     }
-
-//     setStartingConsultation(false);
-//   };
-
-//   useEffect(() => {
-//     if (id) fetchLawyer();
-//   }, [id]);
-
-//   const fetchLawyer = async () => {
-//     setLoading(true);
-
-//     const { data: profileData } = await supabase
-//       .from("lawyer_profiles")
-//       .select("*")
-//       .eq("user_id", id)
-//       .single();
-
-//     if (!profileData) {
-//       setLoading(false);
-//       return;
-//     }
-
-//     const { data: userProfile } = await supabase
-//       .from("profiles")
-//       .select("full_name, avatar_url")
-//       .eq("id", id)
-//       .single();
-
-//     setLawyer({
-//       ...profileData,
-//       full_name: formatLawyerName(userProfile?.full_name),
-//       avatar_url: userProfile?.avatar_url
-//     });
-
-//     setLoading(false);
-//   };
-
-//   if (loading) {
-//     return (
-//       <ClientLayout>
-//         <div className="p-10 text-center">Loading lawyer profile...</div>
-//       </ClientLayout>
-//     );
-//   }
-
-//   if (!lawyer) {
-//     return (
-//       <ClientLayout>
-//         <div className="p-10 text-center">Lawyer not found</div>
-//       </ClientLayout>
-//     );
-//   }
-
-//   return (
-//     <ClientLayout>
-//       <div className="container mx-auto px-4 py-8 max-w-4xl">
-
-//         <Button variant="ghost" className="mb-6" onClick={() => navigate(-1)}>
-//           <ArrowLeft className="h-4 w-4 mr-2" />
-//           Back to Dashboard
-//         </Button>
-
-//         <Card>
-//           <CardContent className="p-8">
-//             <div className="flex flex-col md:flex-row gap-8">
-
-//               {/* Avatar */}
-//               <div className="w-32 h-32 rounded-full bg-primary/10 flex items-center justify-center text-4xl font-semibold shrink-0">
-//                 {lawyer.avatar_url ? (
-//                   <img
-//                     src={lawyer.avatar_url}
-//                     alt="avatar"
-//                     className="w-full h-full rounded-full object-cover"
-//                   />
-//                 ) : (
-//                   <User className="w-12 h-12" />
-//                 )}
-//               </div>
-
-//               {/* Info */}
-//               <div className="flex-1">
-//                 <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
-//                   <div>
-//                     <h1 className="text-3xl font-bold mb-2">
-//                       {lawyer.full_name}
-//                     </h1>
-
-//                     <div className="flex items-center gap-3 text-muted-foreground">
-//                       <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-//                       <span className="font-semibold text-foreground">
-//                         {lawyer.rating?.toFixed(1) || "0.0"}
-//                       </span>
-//                       <span>({lawyer.total_reviews || 0} reviews)</span>
-//                     </div>
-//                   </div>
-
-//                   <Badge variant={lawyer.is_available ? "default" : "secondary"}>
-//                     {lawyer.is_available ? "Available Now" : "Offline"}
-//                   </Badge>
-//                 </div>
-
-//                 {/* Specializations */}
-//                 {lawyer.specializations?.length ? (
-//                   <div className="flex flex-wrap gap-2 mb-4">
-//                     {lawyer.specializations.map((s) => (
-//                       <Badge key={s} variant="outline">
-//                         {s}
-//                       </Badge>
-//                     ))}
-//                   </div>
-//                 ) : null}
-
-//                 {/* Bio */}
-//                 <p className="text-muted-foreground mb-6">
-//                   {lawyer.bio || "No bio provided."}
-//                 </p>
-
-//                 {/* Stats */}
-//                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-
-//                   <div className="text-center p-3 bg-secondary rounded-lg">
-//                     <div className="text-sm font-semibold">
-//                       {lawyer.experience_years || 0} yrs
-//                     </div>
-//                     <div className="text-xs text-muted-foreground">Experience</div>
-//                   </div>
-
-//                   <div className="text-center p-3 bg-secondary rounded-lg">
-//                     <div className="text-sm font-semibold">
-//                       {lawyer.languages?.length || 1}
-//                     </div>
-//                     <div className="text-xs text-muted-foreground">Languages</div>
-//                   </div>
-
-//                   <div className="text-center p-3 bg-secondary rounded-lg">
-//                     <div className="text-sm font-semibold">
-//                       ₹{lawyer.price_per_minute || 0}/min
-//                     </div>
-//                     <div className="text-xs text-muted-foreground">Rate</div>
-//                   </div>
-
-//                   <div className="text-center p-3 bg-secondary rounded-lg">
-//                     <div className="text-sm font-semibold">
-//                       {lawyer.status || "Unknown"}
-//                     </div>
-//                     <div className="text-xs text-muted-foreground">Status</div>
-//                   </div>
-
-//                 </div>
-//               </div>
-//             </div>
-//           </CardContent>
-//         </Card>
-
-//         {/* ACTION BUTTONS */}
-//         <Card>
-//           <CardContent className="p-8">
-//             <div className="flex flex-col md:flex-row gap-8">
-//               <div
-//                 className="px-3 py-2.5 border-t border-border bg-muted/30 flex items-center gap-1.5"
-//                 onClick={(e) => e.stopPropagation()}
-//               >
-//                 <Button
-//                   size="sm"
-//                   variant="ghost"
-//                   className="h-8 w-8 p-0 hover:bg-emerald-500/10 hover:text-emerald-600"
-//                   onClick={(e) => handleBookClick("chat", e)}
-//                   disabled={startingConsultation}
-//                 >
-//                   <MessageSquare className="h-3.5 w-3.5" />
-//                 </Button>
-
-//                 <Button
-//                   size="sm"
-//                   variant="ghost"
-//                   className="h-8 w-8 p-0 hover:bg-blue-500/10 hover:text-blue-600"
-//                   onClick={(e) => handleBookClick("audio", e)}
-//                   disabled={startingConsultation}
-//                 >
-//                   <Phone className="h-3.5 w-3.5" />
-//                 </Button>
-
-//                 <Button
-//                   size="sm"
-//                   variant="ghost"
-//                   className="h-8 w-8 p-0 hover:bg-purple-500/10 hover:text-purple-600"
-//                   onClick={(e) => handleBookClick("video", e)}
-//                   disabled={startingConsultation}
-//                 >
-//                   <Video className="h-3.5 w-3.5" />
-//                 </Button>
-
-//                 <Button
-//                   size="sm"
-//                   className="ml-auto h-8 text-xs gap-1.5 px-3"
-//                   onClick={(e) => handleBookClick("video", e)}
-//                   disabled={startingConsultation}
-//                 >
-//                   <CreditCard className="h-3 w-3" />
-//                   Book Now
-//                   <ChevronRight className="h-3 w-3" />
-//                 </Button>
-//               </div>
-//             </div>
-//           </CardContent>
-//         </Card>
-
-//         {/* FOOTER INFO */}
-//         <Card>
-//           <CardContent className="p-8">
-//             <div className="flex items-center gap-4 text-muted-foreground mb-4">
-//               <Clock className="h-5 w-5" />
-//               <span className="text-sm">
-//                 Available: 9am - 6pm, Mon - Fri
-//               </span>
-//             </div>
-//             <div className="text-sm text-muted-foreground">
-//               Note: Booking a consultation will require payment. You can choose to pay per minute or a fixed fee for the session.
-//             </div>
-//           </CardContent>
-//         </Card>
-
-//       </div>
-//     </ClientLayout>
-//   );
-// }
-
-
-// *******************888
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -610,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { BookingPaymentModal } from '@/components/lawyers/BookingPaymentModal';
+// import { BookingPaymentModal } from '@/components/lawyers/BookingPaymentModal';
 import { ClientLayout } from '@/components/layout/ClientLayout';
 import {
   Star, MessageSquare, Video, Phone, Clock, Award,
@@ -621,6 +22,7 @@ import {
 } from 'lucide-react';
 import { formatLawyerName } from '@/lib/lawyer-utils';
 import { calculateAge } from '@/lib/ageUtils';
+import { BookingAgendaModal } from './../components/lawyers/BookingAgendaModal';
 interface LawyerData {
   id: string;
   user_id: string;
@@ -638,13 +40,18 @@ interface LawyerData {
   education: string | null;
   bar_council_number: string | null;
   created_at: string | null;
-  date_of_birth: string | null;
+  // date_of_birth: string | null;
+  date_of_birth?: string | null;
+  // onBooking?: () => void;
+  onSuccess?: (bookingId: string) => void;
+
 }
 interface ProfileData {
   full_name: string;
   avatar_url: string | null;
   email: string;
-  date_of_birth: string | null;
+  // date_of_birth: string | null;
+  date_of_birth?: string | null;
 }
 interface ReviewData {
   id: string;
@@ -654,8 +61,14 @@ interface ReviewData {
   client_id: string;
   client_name?: string;
   client_avatar?: string | null;
+
+
 }
+
+
+
 const ClientLawyerDetail = () => {
+
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, role } = useAuth();
@@ -666,6 +79,33 @@ const ClientLawyerDetail = () => {
   const [loading, setLoading] = useState(true);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedType, setSelectedType] = useState<'chat' | 'audio' | 'video'>('chat');
+
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [completedConsultations, setCompletedConsultations] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedReview, setSelectedReview] = useState<ReviewData | null>(null);
+  const [totalConsultations, setTotalConsultations] = useState(0);
+  const REVIEWS_PER_PAGE = 3;
+
+  const onBooking = (bookingId: string) => {
+    // Close modal
+    setShowBookingModal(false);
+
+    // Show a success toast
+    toast({
+      title: 'Request Sent',
+      description: 'Your consultation request has been sent to the lawyer.',
+      // variant: 'success',
+    });
+
+  };
+  const totalPages = Math.ceil(reviews.length / REVIEWS_PER_PAGE);
+
+  const paginatedReviews = reviews.slice(
+    (currentPage - 1) * REVIEWS_PER_PAGE,
+    currentPage * REVIEWS_PER_PAGE
+  );
+
   useEffect(() => {
     if (!user) {
       navigate('/login');
@@ -673,6 +113,8 @@ const ClientLawyerDetail = () => {
     }
     if (id) fetchLawyerDetails();
   }, [id, user]);
+
+
   const fetchLawyerDetails = async () => {
     const { data, error } = await supabase
       .from('lawyer_profiles')
@@ -686,11 +128,63 @@ const ClientLawyerDetail = () => {
     }
     setLawyer(data);
     const [profileRes, reviewsRes] = await Promise.all([
-      // supabase.from('profiles').select('full_name, avatar_url, email').eq('id', data.user_id).single(),
       supabase.from('profiles').select('full_name, avatar_url, email, date_of_birth').eq('id', data.user_id).single(),
       supabase.from('reviews').select('*').eq('lawyer_id', data.user_id).order('created_at', { ascending: false }).limit(20),
     ]);
     if (profileRes.data) setProfile(profileRes.data);
+
+    // ✅ Fetch ONLY completed consultations
+    const { count } = await supabase
+      .from('consultations')
+      .select('*', { count: 'exact', head: true })
+      .eq('lawyer_id', data.id)
+      .eq('status', 'completed');
+
+    if (!error) {
+      setCompletedConsultations(count || 0);
+      setTotalConsultations(count || 0);
+    }
+
+    // const { data: consultations } = await supabase
+    //   .from('consultations')
+    //   .select('id, status')
+    //   .eq('lawyer_id', data.id)
+    //   .eq('status', 'completed');
+
+    // if (!error && consultations) {
+    //   setCompletedConsultations(consultations.length);
+    //   setTotalConsultations(consultations.length);
+    // }
+
+
+    // const fetchConsultationCount = async (lawyerId: string) => {
+    //   const { count, error } = await supabase
+    //     .from('consultations')
+    //     .select('*', { count: 'exact', head: true })
+    //     .eq('lawyer_id', lawyerId)
+    //     .eq('status', 'completed'); // optional
+
+    //   if (!error) {
+    //     setTotalConsultations(count || 0);
+    //   }
+    // };
+
+
+
+
+
+    // setCompletedConsultations(count || 0);
+
+    // ✅ KEEP ONLY THIS — uses data.user_id since consultations.lawyer_id stores user_id
+    const { count: completedCount } = await supabase
+      .from('consultations')
+      .select('*', { count: 'exact', head: true })
+      .eq('lawyer_id', data.user_id)  // ← use user_id, NOT data.id
+      .eq('status', 'completed');
+
+    setCompletedConsultations(completedCount || 0);
+    setTotalConsultations(completedCount || 0);
+
     if (reviewsRes.data && reviewsRes.data.length > 0) {
       const clientIds = [...new Set(reviewsRes.data.map(r => r.client_id))];
       const { data: clientProfiles } = await supabase
@@ -704,19 +198,35 @@ const ClientLawyerDetail = () => {
       })));
     }
     setLoading(false);
+
+
   };
-  const handleBookClick = (type: 'chat' | 'audio' | 'video') => {
+
+
+
+
+  const handleBookClick = (
+    type: 'chat' | 'audio' | 'video',
+    e?: React.MouseEvent
+  ) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+
     if (!user) {
+      toast({
+        title: 'Login Required',
+        description: 'Please login to book a consultation.',
+        variant: 'destructive',
+      });
       navigate('/login');
       return;
     }
-    if (role !== 'client') {
-      toast({ variant: 'destructive', title: 'Not allowed', description: 'Only clients can book consultations.' });
-      return;
-    }
+
     setSelectedType(type);
-    setShowPaymentModal(true);
+    setShowBookingModal(true);
   };
+
+
   const renderStars = (rating: number) =>
     [...Array(5)].map((_, i) => (
       <Star key={i} className={`h-4 w-4 ${i < Math.round(rating) ? 'fill-amber-500 text-amber-500' : 'text-muted-foreground/30'}`} />
@@ -804,36 +314,40 @@ const ClientLawyerDetail = () => {
                   </div>
 
                   {/* Meta Row */}
-                  <div className="flex flex-wrap justify-center sm:justify-start items-center gap-3 text-sm text-muted-foreground">
+                  <div className="flex flex-wrap justify-center sm:justify-start items-center gap-3 text-sm text-muted-foreground ">
 
                     {/* Rating */}
                     <div className="flex items-center gap-1 bg-amber-500/10 px-3 py-1 rounded-full">
                       <Star className="h-4 w-9 fill-amber-500 text-amber-500" />
                       <span className="font-semibold text-amber-600">({avgRating} Ratings)</span>
-                      <span className="text-sm  text-foreground whitespace-nowrap"> || {reviews.length} Reviews</span>
+                      <span className="text-sm  text-foreground whitespace-nowrap"> | {reviews.length} Reviews</span>
                     </div>
 
                     {/* Member Since */}
                     <span className="flex items-center gap-1">
                       <Calendar className="h-3.5 w-3.5" />
-                      <p>Member since {memberSince}</p>
+                      <p>Member since {memberSince} |</p>
                     </span>
                     <span>
-                      {calculateAge(profile.date_of_birth) !== null && (
-                        <span className="text-sm text-muted-foreground flex items-center gap-1.5">
-                          <User className="h-3.5 w-3.5" />
-                          {calculateAge(profile.date_of_birth)} years old
-                        </span>
-                      )}
+                      <Badge
+                        className={`text-xs px-2 py-1 font-medium flex items-center gap-1
+                      ${lawyer.status === 'approved'
+                            ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                            : lawyer.status === 'pending'
+                              ? 'bg-amber-500/10 text-amber-600 border-amber-500/20'
+                              : 'bg-red-500/10 text-red-600 border-red-500/20'
+                          }`}
+                      >
+                        <Shield className="h-4 w-4 " />
+                        {lawyer.status === 'approved'
+                          ? 'Verified'
+                          : lawyer.status === 'pending'
+                            ? 'Pending'
+                            : 'Not Verified'}
+                      </Badge>
+
                     </span>
 
-                    {/* Consultations */}
-                    {lawyer.total_consultations > 0 && (
-                      <span className="flex items-center gap-1">
-                        <Briefcase className="h-3.5 w-3.5" />
-                        {lawyer.total_consultations}
-                      </span>
-                    )}
                   </div>
 
                   {/* Specializations */}
@@ -904,7 +418,7 @@ const ClientLawyerDetail = () => {
                     <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center mx-auto mb-3">
                       <Globe className="h-5 w-5 text-blue-600" />
                     </div>
-                    <p className="text-2xl font-bold">{lawyer.languages?.length || 1}</p>
+                    <p className="text-2xl font-bold">{lawyer.languages?.length || 0}</p>
                     <p className="text-xs text-muted-foreground mt-1">Languages</p>
                   </CardContent>
                 </Card>
@@ -922,83 +436,116 @@ const ClientLawyerDetail = () => {
                     <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center mx-auto mb-3">
                       <Users className="h-5 w-5 text-purple-600" />
                     </div>
-                    <p className="text-2xl font-bold">{lawyer.total_consultations || 0}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Consultations</p>
+                    <p className="text-2xl font-bold">{totalConsultations}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Completed   Consultations</p>
                   </CardContent>
                 </Card>
               </div>
               {/* Qualifications Card */}
-              <Card className="border-0 shadow-lg">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Award className="h-5 w-5 text-primary" />
+              <Card className="border-0 shadow-md hover:shadow-lg transition-all duration-300 rounded-2xl">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base sm:text-lg flex items-center gap-2 font-semibold">
+                    <Award className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                     Qualifications & Details
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-5">
-                  {lawyer.education && (
-                    <div className="flex items-start gap-3 p-3 bg-secondary/30 rounded-xl">
-                      <GraduationCap className="h-5 w-5 text-primary mt-0.5" />
-                      <div>
-                        <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Education</h4>
-                        <p className="mt-1">{lawyer.education}</p>
-                      </div>
-                    </div>
-                  )}
-                  {lawyer.bar_council_number && (
-                    <div className="flex items-start gap-3 p-3 bg-secondary/30 rounded-xl">
-                      <BadgeCheck className="h-5 w-5 text-primary mt-0.5" />
-                      <div>
-                        <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Bar Council Registration</h4>
-                        <p className="mt-1">Reg. No: {lawyer.bar_council_number}</p>
-                      </div>
-                    </div>
-                  )}
-                  {lawyer.languages && lawyer.languages.length > 0 && (
-                    <div className="flex items-start gap-3 p-3 bg-secondary/30 rounded-xl">
-                      <Languages className="h-5 w-5 text-primary mt-0.5" />
-                      <div>
-                        <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">Languages</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {lawyer.languages.map(lang => (
-                            <Badge key={lang} variant="outline" className="gap-1.5">
-                              <Globe className="h-3 w-3" />
-                              {lang}
-                            </Badge>
-                          ))}
+
+                <CardContent className="space-y-3">
+
+                  {/* GRID LAYOUT */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+                    {/* EDUCATION */}
+                    {lawyer.education && (
+                      <div className="flex items-start gap-2 p-3 rounded-xl bg-secondary/40 hover:bg-secondary/60 transition">
+                        <GraduationCap className="h-4 w-4 text-primary mt-1 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+                            Education
+                          </p>
+                          <p className="text-sm font-medium leading-snug truncate">
+                            {lawyer.education}
+                          </p>
                         </div>
                       </div>
-                    </div>
-                  )}
-                  <div className="flex items-start gap-3 p-3 bg-secondary/30 rounded-xl">
-                    <Shield className="h-5 w-5 text-primary mt-0.5" />
-                    <div>
-                      <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">Verification Status</h4>
-                      <Badge
-                        className={
-                          lawyer.status === 'approved'
-                            ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-                            : lawyer.status === 'pending'
-                              ? 'bg-amber-500/10 text-amber-600 border-amber-500/20'
-                              : 'bg-red-500/10 text-red-600 border-red-500/20'
-                        }
-                      >
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        {lawyer.status === 'approved' ? 'Verified & Approved' : lawyer.status === 'pending' ? 'Pending Verification' : 'Not Verified'}
-                      </Badge>
-                    </div>
+                    )}
+
+                    {/* BAR COUNCIL */}
+                    {lawyer.bar_council_number && (
+                      <div className="flex items-start gap-2 p-3 rounded-xl bg-secondary/40 hover:bg-secondary/60 transition">
+                        <BadgeCheck className="h-4 w-4 text-primary mt-1 shrink-0" />
+                        <div>
+                          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+                            Registration
+                          </p>
+                          <p className="text-sm font-medium">
+                            {lawyer.bar_council_number}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* AGE + DOB (NEW) */}
+                    {profile?.date_of_birth && (
+                      <div className="flex items-start gap-2 p-3 rounded-xl bg-secondary/40 hover:bg-secondary/60 transition">
+                        <User className="h-4 w-4 text-primary mt-1 shrink-0" />
+                        <div>
+                          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+                            Age
+                          </p>
+                          <p className="text-sm font-medium">
+                            {calculateAge(profile.date_of_birth)} yrs
+                          </p>
+                          {/* <p className="text-[11px] text-muted-foreground">
+                            {new Date(profile.date_of_birth).toLocaleDateString()}
+                          </p> */}
+                        </div>
+                      </div>
+                    )}
+                    {/* LANGUAGES */}
+                    {lawyer.languages && lawyer.languages.length > 0 && (
+                      <div className="flex items-start gap-2 p-3 rounded-xl bg-secondary/40 hover:bg-secondary/60 transition">
+                        <Languages className="h-4 w-4 text-primary mt-1 shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                            Languages
+                          </p>
+
+                          <div className="flex flex-wrap gap-1.5">
+                            {lawyer.languages.slice(0, 6).map(lang => (
+                              <Badge
+                                key={lang}
+                                variant="outline"
+                                className="text-[11px] px-2 py-0.5 rounded-md flex items-center gap-1"
+                              >
+                                <Globe className="h-3 w-3" />
+                                {lang}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                   </div>
+
+
+
+
                 </CardContent>
               </Card>
               {/* Reviews Section */}
-              <Card className="border-0 shadow-lg">
-                <CardHeader>
+              <Card className="border-0 shadow-lg rounded-2xl overflow-hidden">
+
+                <CardHeader className="pb-3">
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Star className="h-5 w-5 text-amber-500" />
                     Client Reviews ({reviews.length})
                   </CardTitle>
                 </CardHeader>
+
                 <CardContent>
+
                   {reviews.length === 0 ? (
                     <div className="text-center py-12">
                       <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
@@ -1008,39 +555,122 @@ const ClientLawyerDetail = () => {
                       <p className="text-sm text-muted-foreground mt-1">Be the first to leave a review!</p>
                     </div>
                   ) : (
-                    <div className="space-y-5">
-                      {reviews.map(review => (
-                        <div key={review.id} className="pb-5 border-b border-border last:border-0 last:pb-0">
-                          <div className="flex items-start gap-3">
-                            <Avatar className="h-10 w-10">
-                              <AvatarImage src={review.client_avatar || undefined} />
-                              <AvatarFallback className="text-sm bg-secondary">
-                                {review.client_name?.charAt(0) || 'C'}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1">
-                              <div className="flex items-center justify-between">
-                                <span className="font-semibold text-sm">{review.client_name}</span>
-                                <span className="text-xs text-muted-foreground">
-                                  {new Date(review.created_at).toLocaleDateString()}
-                                </span>
+                    <>
+                      {/* REVIEWS LIST */}
+                      <div className="space-y-4">
+
+                        {paginatedReviews.map(review => {
+
+                          const isLong = review.comment && review.comment.length > 120;
+
+                          return (
+                            <div
+                              key={review.id}
+                              className="p-4 rounded-xl border bg-secondary/20 hover:bg-secondary/40 transition"
+                            >
+
+                              <div className="flex items-start gap-3">
+
+                                {/* Avatar */}
+                                <Avatar className="h-10 w-10">
+                                  <AvatarImage src={review.client_avatar || undefined} />
+                                  <AvatarFallback className="text-sm bg-secondary">
+                                    {review.client_name?.charAt(0) || 'C'}
+                                  </AvatarFallback>
+                                </Avatar>
+
+                                {/* Content */}
+                                <div className="flex-1">
+
+                                  {/* Header */}
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-semibold text-sm">
+                                      {review.client_name}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {new Date(review.created_at).toLocaleDateString()}
+                                    </span>
+                                  </div>
+
+                                  {/* Stars */}
+                                  <div className="flex items-center gap-0.5 mt-1">
+                                    {renderStars(review.rating || 0)}
+                                  </div>
+
+                                  {/* Comment */}
+                                  {review.comment && (
+                                    <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+                                      {isLong
+                                        ? review.comment.slice(0, 120) + '...'
+                                        : review.comment}
+                                    </p>
+                                  )}
+
+                                  {/* SEE MORE */}
+                                  {isLong && (
+                                    <button
+                                      onClick={() => setSelectedReview(review)}
+                                      className="text-xs text-primary mt-1 hover:underline"
+                                    >
+                                      See more
+                                    </button>
+                                  )}
+
+                                </div>
+
                               </div>
-                              <div className="flex items-center gap-0.5 mt-1">
-                                {renderStars(review.rating || 0)}
-                              </div>
-                              {review.comment && (
-                                <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
-                                  {review.comment}
-                                </p>
-                              )}
+
                             </div>
-                          </div>
+                          );
+                        })}
+
+                      </div>
+
+                      {/* PAGINATION */}
+                      {totalPages > 1 && (
+                        <div className="flex justify-center items-center gap-2 mt-6 flex-wrap">
+
+                          {/* Previous */}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={currentPage === 1}
+                            onClick={() => setCurrentPage(prev => prev - 1)}
+                          >
+                            Prev
+                          </Button>
+
+                          {/* Page Numbers */}
+                          {[...Array(totalPages)].map((_, i) => (
+                            <Button
+                              key={i}
+                              size="sm"
+                              variant={currentPage === i + 1 ? "default" : "outline"}
+                              className="h-8 w-8 p-0"
+                              onClick={() => setCurrentPage(i + 1)}
+                            >
+                              {i + 1}
+                            </Button>
+                          ))}
+
+                          {/* Next */}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={currentPage === totalPages}
+                            onClick={() => setCurrentPage(prev => prev + 1)}
+                          >
+                            Next
+                          </Button>
+
                         </div>
-                      ))}
-                    </div>
+                      )}
+                    </>
                   )}
+
                 </CardContent>
               </Card>
+
             </div>
             {/* Right Sidebar - Sticky Booking */}
             <div className="lg:col-span-1">
@@ -1079,28 +709,76 @@ const ClientLawyerDetail = () => {
                         <span className="text-muted-foreground flex items-center gap-2">
                           <Users className="h-3.5 w-3.5" /> Consultations
                         </span>
-                        <span className="font-semibold">{lawyer.total_consultations || 0}</span>
+                        <span className="font-semibold">{totalConsultations}</span>
                       </div>
                     </div>
                     <Separator />
-                    {/* Booking Buttons */}
+                    {/* Booking Buttons - Premium Full Width */}
                     <div className="space-y-3">
-                      <Button className="w-full gap-2 h-11" variant="outline" onClick={() => handleBookClick('chat')}>
-                        <MessageSquare className="h-4 w-4" />
-                        Start Chat
-                      </Button>
-                      <Button className="w-full gap-2 h-11" variant="outline" onClick={() => handleBookClick('audio')}>
-                        <Phone className="h-4 w-4" />
-                        Audio Call
-                      </Button>
-                      <Button className="w-full gap-2 h-11" variant="outline" onClick={() => handleBookClick('video')}>
-                        <Video className="h-4 w-4" />
-                        Video Call
-                      </Button>
-                      <Button className="w-full gap-2 h-12 text-base font-semibold shadow-lg" onClick={() => handleBookClick('video')}>
+
+                      {/* Main CTA */}
+                      <Button
+                        onClick={(e) => handleBookClick('chat', e)}
+                        className="
+      w-full h-12 text-base font-semibold
+      rounded-xl
+      bg-gradient-to-r from-primary to-primary/80
+      hover:from-primary/90 hover:to-primary
+      shadow-lg hover:shadow-xl
+      transition-all duration-300
+      hover:scale-[1.02]
+      flex items-center justify-center gap-2
+    "
+                      >
+
                         <CreditCard className="h-5 w-5" />
                         Book Now
                       </Button>
+
+                      {/* Secondary Options */}
+                      <div className="grid grid-cols-3 gap-2">
+
+                        <Button
+                          variant="outline"
+                          onClick={(e) => handleBookClick('chat', e)}
+                          className="
+        h-11 rounded-xl flex flex-col gap-1
+        
+        transition-all duration-200
+      "
+                        >
+                          <MessageSquare className="h-4 w-4" />
+                          <span className="text-xs font-medium">Chat</span>
+                        </Button>
+
+                        <Button
+                          variant="outline"
+                          onClick={(e) => handleBookClick('audio', e)}
+                          className="
+        h-11 rounded-xl flex flex-col gap-1
+       
+        transition-all duration-200
+      "
+                        >
+                          <Phone className="h-4 w-4" />
+                          <span className="text-xs font-medium">Audio</span>
+                        </Button>
+
+                        <Button
+                          variant="outline"
+                          onClick={(e) => handleBookClick('video', e)}
+                          className="
+        h-11 rounded-xl flex flex-col gap-1
+        
+        transition-all duration-200
+      "
+                        >
+                          <Video className="h-4 w-4" />
+                          <span className="text-xs font-medium">Video</span>
+                        </Button>
+
+                      </div>
+
                     </div>
                     {/* Trust Badges */}
                     <div className="pt-2 space-y-2">
@@ -1126,21 +804,20 @@ const ClientLawyerDetail = () => {
           <div className="fixed bottom-0 left-0 right-0 lg:hidden bg-card/95 backdrop-blur-lg border-t border-border p-4 z-50">
             <div className="flex items-center gap-3 max-w-6xl mx-auto">
               <div className="flex-1">
-                <p className="text-xs text-muted-foreground">Rate</p>
+                <p className="text-xs text-muted-foreground">Charges</p>
                 <p className="text-lg font-bold text-primary">₹{lawyer.price_per_minute || 5}/min</p>
               </div>
-              <Button size="sm" variant="outline" className="gap-1" onClick={() => handleBookClick('chat')}>
-                <MessageSquare className="h-4 w-4" />
-              </Button>
-              <Button size="sm" variant="outline" className="gap-1" onClick={() => handleBookClick('audio')}>
-                <Phone className="h-4 w-4" />
-              </Button>
-              <Button size="sm" variant="outline" className="gap-1" onClick={() => handleBookClick('video')}>
-                <Video className="h-4 w-4" />
-              </Button>
-              <Button className="gap-2" onClick={() => handleBookClick('video')}>
+
+              <MessageSquare className="h-4 w-4" />
+
+              <Phone className="h-4 w-4" />
+
+
+              <Video className="h-4 w-4" />
+
+              <Button className="gap-2" onClick={(e) => handleBookClick('chat', e)}>
                 <CreditCard className="h-4 w-4" />
-                Book
+                Book Now
               </Button>
             </div>
           </div>
@@ -1148,24 +825,96 @@ const ClientLawyerDetail = () => {
           <div className="h-24 lg:hidden" />
         </div>
       </div>
-      {/* Payment Modal */}
+
+      {/* BOOKING AGENDA MODAL */}
       {lawyer && profile && (
-        <BookingPaymentModal
-          isOpen={showPaymentModal}
-          onClose={() => setShowPaymentModal(false)}
+        <BookingAgendaModal
+          isOpen={showBookingModal}
+          onClose={() => setShowBookingModal(false)}
           lawyer={{
             id: lawyer.id,
             user_id: lawyer.user_id,
-            full_name: profile.full_name,
+            full_name: profile.full_name || 'Legal Professional',
             avatar_url: profile.avatar_url,
             price_per_minute: lawyer.price_per_minute,
             rating: lawyer.rating,
             specializations: lawyer.specializations,
           }}
           consultationType={selectedType}
+          onSuccess={onBooking}
         />
       )}
-      {/* </MainLayout> */}
+
+      {selectedReview && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4">
+
+          <div
+            className="
+        relative
+        w-full max-w-sm sm:max-w-md
+        max-h-[80vh]
+        bg-card
+        rounded-2xl shadow-2xl
+        p-4 sm:p-5
+        flex flex-col
+      "
+          >
+
+            {/* Close Button */}
+            <button
+              onClick={() => setSelectedReview(null)}
+              className="
+          absolute top-3 right-3
+          text-muted-foreground hover:text-foreground
+          text-lg font-bold
+        "
+            >
+              ✕
+            </button>
+
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-3 pr-6">
+              <Avatar className="h-9 w-9 sm:h-10 sm:w-10">
+                <AvatarImage src={selectedReview.client_avatar || undefined} />
+                <AvatarFallback className="text-sm">
+                  {selectedReview.client_name?.charAt(0) || 'C'}
+                </AvatarFallback>
+              </Avatar>
+
+              <div className="min-w-0">
+                <p className="font-semibold text-sm truncate">
+                  {selectedReview.client_name}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {new Date(selectedReview.created_at).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+
+            {/* Stars */}
+            <div className="flex items-center gap-1 mb-3">
+              {renderStars(selectedReview.rating || 0)}
+            </div>
+
+            {/* Scrollable Comment */}
+            <div
+              className="
+    overflow-y-auto overflow-x-hidden
+    text-sm text-muted-foreground leading-relaxed
+    max-h-[45vh]
+    break-words
+
+    [scrollbar-width:none] 
+    [-ms-overflow-style:none] 
+    [&::-webkit-scrollbar]:hidden
+  "
+            >
+              {selectedReview.comment}
+            </div>
+
+          </div>
+        </div>
+      )}
     </ClientLayout>
   );
 };

@@ -71,7 +71,8 @@ interface BookingAgendaModalProps {
     onClose: () => void;
     lawyer: LawyerInfo;
     consultationType: 'chat' | 'audio' | 'video';
-    onSuccess?: () => void;
+    // onSuccess?: () => void;
+    onSuccess?: (bookingId: string) => void;
 }
 
 export const BookingAgendaModal = ({
@@ -154,7 +155,7 @@ export const BookingAgendaModal = ({
 
                     const updated = payload.new as any;
 
-                    if (updated.status === 'active' && updated.payment_status === 'unpaid') {
+                    if (updated.status === 'pending' && updated.accepted_at) {
                         // Lawyer accepted! Show pay button
                         setStep('accepted');
 
@@ -162,8 +163,10 @@ export const BookingAgendaModal = ({
                             title: '✅ Lawyer Accepted!',
                             description: 'Please complete the payment to start your consultation.',
                         });
-                    } else if (updated.status === 'active' && updated.payment_status === 'paid') {
+                    } else if (updated.status === 'active') {
+
                         // Payment done, redirect to consultation
+
                         toast({
                             title: '🎉 Consultation Started!',
                             description: 'Redirecting to your consultation...',
@@ -171,6 +174,7 @@ export const BookingAgendaModal = ({
 
                         resetAndClose();
                         navigate(`/consultation/${pendingConsultationId}`);
+
                     }
 
                     else if (updated.status === 'cancelled') {
@@ -316,7 +320,7 @@ export const BookingAgendaModal = ({
                 });
                 setPayingNow(false);
                 resetAndClose();
-                onSuccess?.();
+                onSuccess?.(id);
                 navigate(`/consultation/${id}`);
             },
             onError: (error) => {
@@ -349,15 +353,17 @@ export const BookingAgendaModal = ({
         <Dialog open={isOpen} onOpenChange={(open) => { if (!open && step === 'form') resetAndClose(); }}>
 
             <DialogContent
-                className="max-w-lg max-h-[90vh] overflow-hidden p-0"
+                className="w-[95vw] sm:w-full sm:max-w-lg md:max-w-xl lg:max-w-2xl 
+max-h-[92vh] overflow-hidden p-0 rounded-2xl"
                 onPointerDownOutside={(e) => { if (step !== 'form') e.preventDefault(); }}
             >
 
 
 
 
-                <div className="max-h-[90vh] overflow-y-auto p-6 scroll-smooth [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-primary/40 [&::-webkit-scrollbar-thumb]:rounded-full">
-
+                {/* <div className="max-h-[90vh] overflow-y-auto p-6 scroll-smooth [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-primary/40 [&::-webkit-scrollbar-thumb]:rounded-full"> */}
+                <div className="max-h-[92vh] overflow-y-auto px-4 sm:px-6 md:px-8 py-5 sm:py-6 
+scroll-smooth scrollbar-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     <DialogHeader>
 
                         <DialogTitle className="flex items-center gap-2">
@@ -506,7 +512,11 @@ export const BookingAgendaModal = ({
 
                     ) : (
 
-                        <div className="space-y-5 max-h-[70vh] overflow-y-auto pr-1">
+                        <div className="space-y-5 max-h-[70vh] overflow-y-auto pr-1 
+  scrollbar-none 
+  [-ms-overflow-style:none] 
+  [scrollbar-width:none] 
+  [&::-webkit-scrollbar]:hidden">
 
                             {/* Lawyer Info */}
 
@@ -553,7 +563,7 @@ export const BookingAgendaModal = ({
                             <div className="space-y-2">
 
                                 <Label className="text-sm font-medium">
-                                    Consultation Format
+                                    Select The Consultation Mode
                                 </Label>
 
                                 <div className="grid grid-cols-3 gap-2">

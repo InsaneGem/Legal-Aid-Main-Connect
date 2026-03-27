@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ClientLayout } from '@/components/layout/ClientLayout';
@@ -7,10 +8,12 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
     ArrowLeft, RefreshCw, Clock, DollarSign, Wallet, TrendingUp, TrendingDown,
     ArrowDownLeft, ArrowUpRight, Filter, CheckCircle, XCircle, AlertCircle,
-    Banknote, CreditCard, RotateCcw, Receipt, ChevronDown
+    Banknote, CreditCard, RotateCcw, Receipt, ChevronDown,
+    IndianRupee
 } from 'lucide-react';
 type FilterType = 'all' | 'deposit' | 'withdrawal' | 'consultation_fee' | 'commission' | 'refund';
 interface Transaction {
@@ -34,6 +37,7 @@ const filters: { key: FilterType; label: string }[] = [
     { key: 'withdrawal', label: 'Withdrawals' },
     { key: 'consultation_fee', label: 'Consultations' },
     { key: 'refund', label: 'Refunds' },
+
 ];
 const ClientTransactionHistory = () => {
     const { user, loading: authLoading } = useAuth();
@@ -42,7 +46,10 @@ const ClientTransactionHistory = () => {
     const [walletBalance, setWalletBalance] = useState(0);
     const [loading, setLoading] = useState(true);
     const [activeFilter, setActiveFilter] = useState<FilterType>('all');
-    const [showAll, setShowAll] = useState(false);
+    // const [showAll, setShowAll] = useState(false);
+    const [filterType, setFilterType] = useState<FilterType>('all');
+    const [currentPage, setCurrentPage] = useState(1);
+    const perPage = 4;
     useEffect(() => {
         if (!authLoading && !user) { navigate('/login'); return; }
         if (user) {
@@ -74,15 +81,24 @@ const ClientTransactionHistory = () => {
             .order('created_at', { ascending: false });
         setTransactions(data || []);
     };
-    const filtered = activeFilter === 'all' ? transactions : transactions.filter(t => t.type === activeFilter);
-    const displayed = showAll ? filtered : filtered.slice(0, 20);
+    // const filtered = activeFilter === 'all' ? transactions : transactions.filter(t => t.type === activeFilter);
+    const filtered =
+        filterType === 'all'
+            ? transactions
+            : transactions.filter(t => t.type === filterType);
+    // const displayed = showAll ? filtered : filtered.slice(0, 20);
+    const totalPages = Math.ceil(filtered.length / perPage);
+    const displayed = filtered.slice(
+        (currentPage - 1) * perPage,
+        currentPage * perPage
+    );
     const totalIn = transactions.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
     const totalOut = transactions.filter(t => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
     const getConfig = (type: string) => typeConfig[type] || { label: type, icon: DollarSign, color: 'text-muted-foreground', bg: 'bg-muted', border: 'border-border' };
     if (authLoading || loading) {
         return (
             <ClientLayout>
-                <div className="container mx-auto px-4 py-6 max-w-3xl">
+                <div className="container mx-auto px-3 sm:px-4 py-6 max-w-3xl overflow-x-hidden">
                     <Skeleton className="h-8 w-48 mb-4" />
                     <div className="grid grid-cols-3 gap-3 mb-5">
                         {[1, 2, 3].map(i => <Skeleton key={i} className="h-20 rounded-xl" />)}
@@ -94,7 +110,8 @@ const ClientTransactionHistory = () => {
     }
     return (
         <ClientLayout>
-            <div className="container mx-auto px-4 py-6 max-w-3xl">
+            {/* <div className="container mx-auto px-4 py-6 max-w-3xl"> */}
+            <div className="container mx-auto px-4 py-6 max-w-3xl overflow-x-hidden">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-5">
                     <div className="flex items-center gap-3">
@@ -116,7 +133,7 @@ const ClientTransactionHistory = () => {
                 {/* Summary Cards */}
 
                 {/* Filters */}
-                <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1 scrollbar-none">
+                {/* <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1 scrollbar-none w-full max-w-full">
                     <Filter className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                     {filters.map(f => (
                         <Button
@@ -134,17 +151,30 @@ const ClientTransactionHistory = () => {
                             )}
                         </Button>
                     ))}
+                </div> */}
+                <div className="flex flex-col sm:flex-row gap-3 mb-6">
+                    <Tabs value={filterType} onValueChange={(val) => setFilterType(val as FilterType)}>
+                        <TabsList className="h-10">
+                            <TabsTrigger value="all" className="text-xs flex-1 sm:flex-none">All</TabsTrigger>
+                            <TabsTrigger value="deposit" className="text-xs flex-1 sm:flex-none">Deposits</TabsTrigger>
+                            <TabsTrigger value="consultation_fee" className="text-xs flex-1 sm:flex-none">Consultations</TabsTrigger>
+                            <TabsTrigger value="refund" className="text-xs flex-1 sm:flex-none">Refunds</TabsTrigger>
+                        </TabsList>
+                    </Tabs>
                 </div>
+
+
                 {/* Transaction Count */}
                 <p className="text-xs text-muted-foreground mb-3">
                     Showing {displayed.length} of {filtered.length} transactions
                 </p>
                 {/* Transactions */}
                 {filtered.length === 0 ? (
-                    <Card className="border-0 shadow-md">
+                    <Card
+                        className="border-0 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden animate-fade-in max-w-full">
                         <CardContent className="py-14 text-center">
                             <div className="w-14 h-14 rounded-full bg-muted mx-auto mb-4 flex items-center justify-center">
-                                <Receipt className="h-7 w-7 text-muted-foreground" />
+                                <IndianRupee className="h-7 w-7 text-muted-foreground" />
                             </div>
                             <h3 className="text-lg font-semibold font-serif">No Transactions Found</h3>
                             <p className="text-muted-foreground text-sm max-w-sm mx-auto mt-1">
@@ -153,7 +183,7 @@ const ClientTransactionHistory = () => {
                         </CardContent>
                     </Card>
                 ) : (
-                    <div className="space-y-2">
+                    <div className="space-y-2 overflow-x-hidden">
                         {displayed.map((txn, index) => {
                             const cfg = getConfig(txn.type);
                             const IconComp = cfg.icon;
@@ -161,7 +191,7 @@ const ClientTransactionHistory = () => {
                             return (
                                 <Card
                                     key={txn.id}
-                                    className="border-0 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden animate-fade-in"
+                                    className="border-0 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden animate-fade-in max-w-full"
                                     style={{ animationDelay: `${index * 0.04}s` }}
                                 >
                                     <CardContent className="p-3">
@@ -171,7 +201,8 @@ const ClientTransactionHistory = () => {
                                                 <IconComp className={`h-4 w-4 ${cfg.color}`} />
                                             </div>
                                             {/* Details */}
-                                            <div className="min-w-0 flex-1">
+                                            {/* <div className="min-w-0 flex-1"> */}
+                                            <div className="min-w-0 flex-1 break-words">
                                                 <div className="flex items-center gap-2">
                                                     <h3 className="font-semibold text-sm truncate">{cfg.label}</h3>
                                                     <Badge variant="outline" className={`text-[10px] px-1.5 py-0 h-4 ${cfg.bg} ${cfg.color} ${cfg.border}`}>
@@ -183,7 +214,8 @@ const ClientTransactionHistory = () => {
                                                 </p>
                                             </div>
                                             {/* Amount + Date */}
-                                            <div className="text-right shrink-0">
+                                            {/* <div className="text-right shrink-0"> */}
+                                            <div className="text-right shrink-0 min-w-[70px]">
                                                 <p className={`text-sm font-bold ${isPositive ? 'text-emerald-600' : 'text-red-600'}`}>
                                                     {isPositive ? '+' : '-'}${Math.abs(txn.amount).toFixed(2)}
                                                 </p>
@@ -197,22 +229,53 @@ const ClientTransactionHistory = () => {
                                 </Card>
                             );
                         })}
-                        {/* Show More */}
-                        {filtered.length > 20 && !showAll && (
-                            <Button
-                                variant="outline"
-                                className="w-full gap-1.5 h-9 text-xs mt-2"
-                                onClick={() => setShowAll(true)}
-                            >
-                                <ChevronDown className="h-3.5 w-3.5" />
-                                Show All ({filtered.length - 20} more)
-                            </Button>
+
+                        {totalPages > 1 && (
+                            <div className="flex justify-center items-center gap-2 mt-4 flex-wrap">
+
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={currentPage === 1}
+                                    onClick={() => setCurrentPage(p => p - 1)}
+                                    className="text-xs h-8"
+                                >
+                                    Prev
+                                </Button>
+
+                                {[...Array(totalPages)].slice(0, 5).map((_, i) => {
+                                    const page = i + 1;
+                                    return (
+                                        <Button
+                                            key={page}
+                                            size="sm"
+                                            variant={currentPage === page ? "default" : "outline"}
+                                            onClick={() => setCurrentPage(page)}
+                                            className="text-xs h-8 w-8 p-0"
+                                        >
+                                            {page}
+                                        </Button>
+                                    );
+                                })}
+
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={currentPage === totalPages}
+                                    onClick={() => setCurrentPage(p => p + 1)}
+                                    className="text-xs h-8"
+                                >
+                                    Next
+                                </Button>
+
+                            </div>
                         )}
                     </div>
                 )}
                 {/* Monthly Summary */}
                 {transactions.length > 0 && (
-                    <Card className="mt-6 border-0 shadow-sm bg-secondary/30">
+                    <Card
+                        className="border-0 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden animate-fade-in max-w-full">
                         <CardHeader className="pb-2 pt-4 px-4">
                             <CardTitle className="text-sm font-serif flex items-center gap-1.5">
                                 <DollarSign className="h-3.5 w-3.5 text-primary" /> Quick Summary
