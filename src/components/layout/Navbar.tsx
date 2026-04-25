@@ -1,8 +1,12 @@
+
 // import { Link, useNavigate } from 'react-router-dom';
 // import { Button } from '@/components/ui/button';
 // import { useAuth } from '@/contexts/AuthContext';
 // import { Scale, Menu, X, User, LogOut, Shield } from 'lucide-react';
 // import { useState } from 'react';
+// import { NavDropdown } from './NavDropdown';
+// import { MobileNavAccordion } from './MobileNavAccordion';
+// import { navMenuConfig } from './navMenuConfig';
 // import {
 //   DropdownMenu,
 //   DropdownMenuContent,
@@ -33,26 +37,30 @@
 //   };
 
 //   return (
-//     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
-//       <div className="container mx-auto px-4">
+//     // <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
+//     // <nav className="fixed top-[28px] left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
+//     <nav className="fixed top-0 left-0 right-0 z-50 
+// bg-background/70 backdrop-blur-xl border-b border-border/50 
+// shadow-sm transition-all duration-300">
+//       {/* <div className="container mx-auto px-4"> */}
+//       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 //         <div className="flex items-center justify-between h-16">
 //           {/* Logo */}
-//           <Link to="/" className="flex items-center gap-2">
+//           {/* <Link to="/" className="flex items-center gap-2"> */}
+//           <Link to="/" className="flex items-center gap-2 group">
 //             <Scale className="h-8 w-8" />
-//             <span className="font-serif text-xl font-semibold tracking-tight">LEGALMATE</span>
+//             {/* <span className="font-serif text-xl font-semibold tracking-tight">LEGALMATEE</span> */}
+//             <span className="font-serif text-xl font-semibold tracking-tight 
+// group-hover:text-primary transition-colors duration-300">
+//               LEGALMATEE
+//             </span>
 //           </Link>
 
 //           {/* Desktop Navigation */}
-//           <div className="hidden md:flex items-center gap-8">
-//             <Link to="/lawyers" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors underline-animation">
-//               Find Lawyers
-//             </Link>
-//             <Link to="/categories" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors underline-animation">
-//               Practice Areas
-//             </Link>
-//             <Link to="/how-it-works" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors underline-animation">
-//               How It Works
-//             </Link>
+//           <div className="hidden lg:flex items-center gap-6">
+//             {navMenuConfig.map((section) => (
+//               <NavDropdown key={section.title} section={section} />
+//             ))}
 //             {role === 'admin' && (
 //               <Link to="/admin" className="text-sm font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1">
 //                 <Shield className="h-4 w-4" />
@@ -62,11 +70,16 @@
 //           </div>
 
 //           {/* Auth Buttons */}
-//           <div className="hidden md:flex items-center gap-4">
+//           <div className="hidden lg:flex items-center gap-4">
 //             {user ? (
 //               <DropdownMenu>
 //                 <DropdownMenuTrigger asChild>
-//                   <Button variant="outline" size="sm" className="gap-2">
+//                   {/* <Button variant="outline" size="sm" className="gap-2"> */}
+//                   <Button
+//                     variant="outline"
+//                     size="sm"
+//                     className="gap-2 rounded-full px-4 hover:bg-primary/10 transition-all"
+//                   >
 //                     <User className="h-4 w-4" />
 //                     Account
 //                   </Button>
@@ -99,38 +112,23 @@
 
 //           {/* Mobile Menu Button */}
 //           <button
-//             className="md:hidden p-2"
+//             // className="lg:hidden p-2"
+//             className="lg:hidden p-2 rounded-lg hover:bg-secondary transition-all"
 //             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
 //           >
 //             {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
 //           </button>
 //         </div>
-
 //         {/* Mobile Menu */}
 //         {mobileMenuOpen && (
-//           <div className="md:hidden py-4 border-t border-border animate-fade-in">
-//             <div className="flex flex-col gap-4">
-//               <Link
-//                 to="/lawyers"
-//                 className="text-sm font-medium py-2"
-//                 onClick={() => setMobileMenuOpen(false)}
-//               >
-//                 Find Lawyers
-//               </Link>
-//               <Link
-//                 to="/categories"
-//                 className="text-sm font-medium py-2"
-//                 onClick={() => setMobileMenuOpen(false)}
-//               >
-//                 Practice Areas
-//               </Link>
-//               <Link
-//                 to="/how-it-works"
-//                 className="text-sm font-medium py-2"
-//                 onClick={() => setMobileMenuOpen(false)}
-//               >
-//                 How It Works
-//               </Link>
+//           // <div className="lg:hidden py-4 border-t border-border animate-fade-in">
+//           <div className="lg:hidden py-4 border-t border-border 
+// bg-background/95 backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200">
+//             <div className="flex flex-col gap-2">
+//               <MobileNavAccordion
+//                 sections={navMenuConfig}
+//                 onNavigate={() => setMobileMenuOpen(false)}
+//               />
 //               {role === 'admin' && (
 //                 <Link
 //                   to="/admin"
@@ -169,657 +167,11 @@
 //     </nav>
 //   );
 // };
-
-
-
-
-// import { Link, useNavigate, useLocation } from 'react-router-dom';
-// import { Button } from '@/components/ui/button';
-// import { useAuth } from '@/contexts/AuthContext';
-// import { 
-//   Scale, Menu, X, User, LogOut, ChevronDown,
-//   LayoutDashboard, DollarSign, MessageSquare, Star, Clock,
-//   Settings, FileText, Bell, Briefcase, Shield, BookOpen,
-//   Gavel, HelpCircle, Phone, Video, UserCheck
-// } from 'lucide-react';
-// import { useState } from 'react';
-// import {
-//   DropdownMenu,
-//   DropdownMenuContent,
-//   DropdownMenuItem,
-//   DropdownMenuSeparator,
-//   DropdownMenuTrigger,
-//   DropdownMenuLabel,
-//   DropdownMenuGroup,
-// } from '@/components/ui/dropdown-menu';
-// import { Badge } from '@/components/ui/badge';
-// import { cn } from '@/lib/utils';
-// export const LawyerNavbar = () => {
-//   const { user, signOut } = useAuth();
-//   const navigate = useNavigate();
-//   const location = useLocation();
-//   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-//   const handleSignOut = async () => {
-//     await signOut();
-//     navigate('/');
-//   };
-//   const isActive = (path: string) => location.pathname === path;
-//   const navLinkClass = (path: string) =>
-//     cn(
-//       'text-sm font-medium transition-colors underline-animation',
-//       isActive(path) ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
-//     );
-//   return (
-//     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
-//       <div className="container mx-auto px-4">
-//         <div className="flex items-center justify-between h-16">
-//           {/* Logo */}
-//           <Link to="/lawyer/dashboard" className="flex items-center gap-2">
-//             <Scale className="h-8 w-8" />
-//             <div className="flex flex-col">
-//               <span className="font-serif text-xl font-semibold tracking-tight leading-none">LEGALMATE</span>
-//               <span className="text-[10px] text-muted-foreground font-medium tracking-widest uppercase">Lawyer Portal</span>
-//             </div>
-//           </Link>
-//           {/* Desktop Navigation */}
-//           <div className="hidden lg:flex items-center gap-1">
-//             {/* Dashboard Link */}
-//             <Link to="/lawyer/dashboard" className={cn(navLinkClass('/lawyer/dashboard'), 'px-3 py-2')}>
-//               Dashboard
-//             </Link>
-//             {/* My Practice Dropdown */}
-//             <DropdownMenu>
-//               <DropdownMenuTrigger className={cn('flex items-center gap-1 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors outline-none')}>
-//                 My Practice
-//                 <ChevronDown className="h-3.5 w-3.5" />
-//               </DropdownMenuTrigger>
-//               <DropdownMenuContent align="start" className="w-56 bg-popover">
-//                 <DropdownMenuLabel className="text-xs text-muted-foreground uppercase tracking-wider">Practice Management</DropdownMenuLabel>
-//                 <DropdownMenuItem onClick={() => navigate('#')} className="gap-2 cursor-pointer">
-//                   <MessageSquare className="h-4 w-4 text-muted-foreground" />
-//                   <div>
-//                     <p className="font-medium">Consultations</p>
-//                     <p className="text-xs text-muted-foreground">View all client sessions</p>
-//                   </div>
-//                 </DropdownMenuItem>
-//                 <DropdownMenuItem onClick={() => navigate('/lawyer/pending-requests')} className="gap-2 cursor-pointer">
-//                   <Clock className="h-4 w-4 text-muted-foreground" />
-//                   <div>
-//                     <p className="font-medium">Pending Requests</p>
-//                     <p className="text-xs text-muted-foreground">Accept or decline requests</p>
-//                   </div>
-//                 </DropdownMenuItem>
-//                 <DropdownMenuSeparator />
-//                 <DropdownMenuLabel className="text-xs text-muted-foreground uppercase tracking-wider">Communication</DropdownMenuLabel>
-//                 <DropdownMenuItem onClick={() => navigate('#')} className="gap-2 cursor-pointer">
-//                   <Video className="h-4 w-4 text-muted-foreground" />
-//                   <div>
-//                     <p className="font-medium">Video Consultations</p>
-//                     <p className="text-xs text-muted-foreground">Face-to-face with clients</p>
-//                   </div>
-//                 </DropdownMenuItem>
-//                 <DropdownMenuItem onClick={() => navigate('#')} className="gap-2 cursor-pointer">
-//                   <Phone className="h-4 w-4 text-muted-foreground" />
-//                   <div>
-//                     <p className="font-medium">Audio Consultations</p>
-//                     <p className="text-xs text-muted-foreground">Voice calls with clients</p>
-//                   </div>
-//                 </DropdownMenuItem>
-//               </DropdownMenuContent>
-//             </DropdownMenu>
-//             {/* Financials Dropdown */}
-//             <DropdownMenu>
-//               <DropdownMenuTrigger className={cn('flex items-center gap-1 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors outline-none')}>
-//                 Financials
-//                 <ChevronDown className="h-3.5 w-3.5" />
-//               </DropdownMenuTrigger>
-//               <DropdownMenuContent align="start" className="w-56 bg-popover">
-//                 <DropdownMenuItem onClick={() => navigate('/lawyer/earnings')} className="gap-2 cursor-pointer">
-//                   <DollarSign className="h-4 w-4 text-muted-foreground" />
-//                   <div>
-//                     <p className="font-medium">Earnings & Wallet</p>
-//                     <p className="text-xs text-muted-foreground">Balance & transaction history</p>
-//                   </div>
-//                 </DropdownMenuItem>
-//                 <DropdownMenuItem onClick={() => navigate('/lawyer/rating')} className="gap-2 cursor-pointer">
-//                   <Star className="h-4 w-4 text-muted-foreground" />
-//                   <div>
-//                     <p className="font-medium">Ratings & Reviews</p>
-//                     <p className="text-xs text-muted-foreground">Client feedback & scores</p>
-//                   </div>
-//                 </DropdownMenuItem>
-//               </DropdownMenuContent>
-//             </DropdownMenu>
-//             {/* Resources Dropdown */}
-//             <DropdownMenu>
-//               <DropdownMenuTrigger className={cn('flex items-center gap-1 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors outline-none')}>
-//                 Resources
-//                 <ChevronDown className="h-3.5 w-3.5" />
-//               </DropdownMenuTrigger>
-//               <DropdownMenuContent align="start" className="w-56 bg-popover">
-//                 <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => navigate('/lawyer/profile-setup')}>
-//                   <FileText className="h-4 w-4 text-muted-foreground" />
-//                   <div>
-//                     <p className="font-medium">Profile Setup</p>
-//                     <p className="text-xs text-muted-foreground">Complete your onboarding</p>
-//                   </div>
-//                 </DropdownMenuItem>
-//                 <DropdownMenuItem className="gap-2 cursor-pointer">
-//                   <BookOpen className="h-4 w-4 text-muted-foreground" />
-//                   <div>
-//                     <p className="font-medium">Knowledge Base</p>
-//                     <p className="text-xs text-muted-foreground">Guides & legal resources</p>
-//                   </div>
-//                 </DropdownMenuItem>
-//                 <DropdownMenuItem className="gap-2 cursor-pointer">
-//                   <Gavel className="h-4 w-4 text-muted-foreground" />
-//                   <div>
-//                     <p className="font-medium">Legal Updates</p>
-//                     <p className="text-xs text-muted-foreground">Latest case laws & amendments</p>
-//                   </div>
-//                 </DropdownMenuItem>
-//                 <DropdownMenuSeparator />
-//                 <DropdownMenuItem className="gap-2 cursor-pointer">
-//                   <HelpCircle className="h-4 w-4 text-muted-foreground" />
-//                   <div>
-//                     <p className="font-medium">Help & Support</p>
-//                     <p className="text-xs text-muted-foreground">Get platform assistance</p>
-//                   </div>
-//                 </DropdownMenuItem>
-//               </DropdownMenuContent>
-//             </DropdownMenu>
-//           </div>
-//           {/* Right Section */}
-//           <div className="hidden lg:flex items-center gap-3">
-//             {/* Account Dropdown */}
-//             <DropdownMenu>
-//               <DropdownMenuTrigger asChild>
-//                 <Button variant="outline" size="sm" className="gap-2">
-//                   <User className="h-4 w-4" />
-//                   My Account
-//                   <ChevronDown className="h-3.5 w-3.5" />
-//                 </Button>
-//               </DropdownMenuTrigger>
-//               <DropdownMenuContent align="end" className="w-56 bg-popover">
-//                 <DropdownMenuLabel className="text-xs text-muted-foreground uppercase tracking-wider">Account</DropdownMenuLabel>
-//                 <DropdownMenuItem onClick={() => navigate('/lawyer/manage-account')} className="gap-2 cursor-pointer">
-//                   <UserCheck className="h-4 w-4 text-muted-foreground" />
-//                   <div>
-//                     <p className="font-medium">Manage Account</p>
-//                     <p className="text-xs text-muted-foreground">Profile & verification</p>
-//                   </div>
-//                 </DropdownMenuItem>
-//                 <DropdownMenuItem onClick={() => navigate('/settings')} className="gap-2 cursor-pointer">
-//                   <Settings className="h-4 w-4 text-muted-foreground" />
-//                   <div>
-//                     <p className="font-medium">Settings</p>
-//                     <p className="text-xs text-muted-foreground">Preferences & notifications</p>
-//                   </div>
-//                 </DropdownMenuItem>
-//                 <DropdownMenuSeparator />
-//                 <DropdownMenuItem onClick={handleSignOut} className="gap-2 cursor-pointer text-destructive">
-//                   <LogOut className="h-4 w-4" />
-//                   Sign Out
-//                 </DropdownMenuItem>
-//               </DropdownMenuContent>
-//             </DropdownMenu>
-//           </div>
-//           {/* Mobile Menu Button */}
-//           <button
-//             className="lg:hidden p-2"
-//             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-//           >
-//             {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-//           </button>
-//         </div>
-//         {/* Mobile Menu */}
-//         {mobileMenuOpen && (
-//           <div className="lg:hidden py-4 border-t border-border animate-fade-in max-h-[calc(100vh-4rem)] overflow-y-auto">
-//             <div className="flex flex-col gap-1">
-//               {/* Dashboard */}
-//               <button
-//                 className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-secondary transition-colors text-left"
-//                 onClick={() => { navigate('/lawyer/dashboard'); setMobileMenuOpen(false); }}
-//               >
-//                 <LayoutDashboard className="h-5 w-5 text-muted-foreground" />
-//                 <span className="font-medium text-sm">Dashboard</span>
-//               </button>
-//               {/* Practice Section */}
-//               <p className="px-3 pt-4 pb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">My Practice</p>
-//               <button
-//                 className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-secondary transition-colors text-left"
-//                 onClick={() => { navigate('#'); setMobileMenuOpen(false); }}
-//               >
-//                 <MessageSquare className="h-5 w-5 text-muted-foreground" />
-//                 <span className="text-sm">Consultations</span>
-//               </button>
-//               <button
-//                 className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-secondary transition-colors text-left"
-//                 onClick={() => { navigate('/lawyer/pending-requests'); setMobileMenuOpen(false); }}
-//               >
-//                 <Clock className="h-5 w-5 text-muted-foreground" />
-//                 <span className="text-sm">Pending Requests</span>
-//               </button>
-//               {/* Financials Section */}
-//               <p className="px-3 pt-4 pb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Financials</p>
-//               <button
-//                 className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-secondary transition-colors text-left"
-//                 onClick={() => { navigate('/lawyer/earnings'); setMobileMenuOpen(false); }}
-//               >
-//                 <DollarSign className="h-5 w-5 text-muted-foreground" />
-//                 <span className="text-sm">Earnings & Wallet</span>
-//               </button>
-//               <button
-//                 className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-secondary transition-colors text-left"
-//                 onClick={() => { navigate('/lawyer/rating'); setMobileMenuOpen(false); }}
-//               >
-//                 <Star className="h-5 w-5 text-muted-foreground" />
-//                 <span className="text-sm">Ratings & Reviews</span>
-//               </button>
-//               {/* Resources Section */}
-//               <p className="px-3 pt-4 pb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Resources</p>
-//               <button
-//                 className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-secondary transition-colors text-left"
-//                 onClick={() => { navigate('/lawyer/profile-setup'); setMobileMenuOpen(false); }}
-//               >
-//                 <FileText className="h-5 w-5 text-muted-foreground" />
-//                 <span className="text-sm">Profile Setup</span>
-//               </button>
-//               <button
-//                 className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-secondary transition-colors text-left"
-//               >
-//                 <BookOpen className="h-5 w-5 text-muted-foreground" />
-//                 <span className="text-sm">Knowledge Base</span>
-//               </button>
-//               <button
-//                 className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-secondary transition-colors text-left"
-//               >
-//                 <Gavel className="h-5 w-5 text-muted-foreground" />
-//                 <span className="text-sm">Legal Updates</span>
-//               </button>
-//               {/* Account Section */}
-//               <div className="flex flex-col gap-2 pt-4 mt-2 border-t border-border">
-//                 <Button variant="outline" className="gap-2 justify-start" onClick={() => { navigate('/lawyer/manage-account'); setMobileMenuOpen(false); }}>
-//                   <UserCheck className="h-4 w-4" />
-//                   Manage Account
-//                 </Button>
-//                 <Button variant="outline" className="gap-2 justify-start" onClick={() => { navigate('/settings'); setMobileMenuOpen(false); }}>
-//                   <Settings className="h-4 w-4" />
-//                   Settings
-//                 </Button>
-//                 <Button variant="ghost" className="gap-2 justify-start text-destructive" onClick={handleSignOut}>
-//                   <LogOut className="h-4 w-4" />
-//                   Sign Out
-//                 </Button>
-//               </div>
-//             </div>
-//           </div>
-//         )}
-//       </div>
-//     </nav>
-//   );
-// };
-
-
-
-// 
-// ****************************************************8\
-
-// import { Link, useNavigate } from 'react-router-dom';
-// import { Button } from '@/components/ui/button';
-// import { useAuth } from '@/contexts/AuthContext';
-// import { Scale, Menu, X, User, LogOut, Shield } from 'lucide-react';
-// import { useState } from 'react';
-// import {
-//   DropdownMenu,
-//   DropdownMenuContent,
-//   DropdownMenuItem,
-//   DropdownMenuSeparator,
-//   DropdownMenuTrigger,
-// } from '@/components/ui/dropdown-menu';
-
-// export const Navbar = () => {
-//   const { user, role, signOut } = useAuth();
-//   const navigate = useNavigate();
-//   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-//   const handleSignOut = async () => {
-//     await signOut();
-//     navigate('/');
-//   };
-
-//   const getDashboardLink = () => {
-//     switch (role) {
-//       case 'admin':
-//         return '/admin';
-//       case 'lawyer':
-//         return '/lawyer/dashboard';
-//       default:
-//         return '/dashboard';
-//     }
-//   };
-
-//   return (
-//     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
-//       <div className="container mx-auto px-4">
-//         <div className="flex items-center justify-between h-16">
-//           {/* Logo */}
-//           <Link to="/" className="flex items-center gap-2">
-//             <Scale className="h-8 w-8" />
-//             <span className="font-serif text-xl font-semibold tracking-tight">LEGALMATE</span>
-//           </Link>
-
-//           {/* Desktop Navigation */}
-//           <div className="hidden md:flex items-center gap-8">
-//             <Link to="/lawyers" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors underline-animation">
-//               Find Lawyerssss
-//             </Link>
-//             <Link to="/categories" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors underline-animation">
-//               Practice Areas
-//             </Link>
-//             <Link to="/how-it-works" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors underline-animation">
-//               How It Works
-//             </Link>
-//             {role === 'admin' && (
-//               <Link to="/admin" className="text-sm font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1">
-//                 <Shield className="h-4 w-4" />
-//                 Admin
-//               </Link>
-//             )}
-//           </div>
-
-//           {/* Auth Buttons */}
-//           <div className="hidden md:flex items-center gap-4">
-//             {user ? (
-//               <DropdownMenu>
-//                 <DropdownMenuTrigger asChild>
-//                   <Button variant="outline" size="sm" className="gap-2">
-//                     <User className="h-4 w-4" />
-//                     Account
-//                   </Button>
-//                 </DropdownMenuTrigger>
-//                 <DropdownMenuContent align="end" className="w-48">
-//                   <DropdownMenuItem onClick={() => navigate(getDashboardLink())}>
-//                     Dashboard
-//                   </DropdownMenuItem>
-//                   <DropdownMenuItem onClick={() => navigate('/settings')}>
-//                     Settings
-//                   </DropdownMenuItem>
-//                   <DropdownMenuSeparator />
-//                   <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
-//                     <LogOut className="h-4 w-4 mr-2" />
-//                     Sign Out
-//                   </DropdownMenuItem>
-//                 </DropdownMenuContent>
-//               </DropdownMenu>
-//             ) : (
-//               <>
-//                 <Button variant="ghost" size="sm" onClick={() => navigate('/login')}>
-//                   Sign In
-//                 </Button>
-//                 <Button size="sm" onClick={() => navigate('/signup')}>
-//                   Get Started
-//                 </Button>
-//               </>
-//             )}
-//           </div>
-
-//           {/* Mobile Menu Button */}
-//           <button
-//             className="md:hidden p-2"
-//             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-//           >
-//             {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-//           </button>
-//         </div>
-
-//         {/* Mobile Menu */}
-//         {mobileMenuOpen && (
-//           <div className="md:hidden py-4 border-t border-border animate-fade-in">
-//             <div className="flex flex-col gap-4">
-//               <Link
-//                 to="/lawyers"
-//                 className="text-sm font-medium py-2"
-//                 onClick={() => setMobileMenuOpen(false)}
-//               >
-//                 Find Lawyers
-//               </Link>
-//               <Link
-//                 to="/categories"
-//                 className="text-sm font-medium py-2"
-//                 onClick={() => setMobileMenuOpen(false)}
-//               >
-//                 Practice Areas
-//               </Link>
-//               <Link
-//                 to="/how-it-works"
-//                 className="text-sm font-medium py-2"
-//                 onClick={() => setMobileMenuOpen(false)}
-//               >
-//                 How It Works
-//               </Link>
-//               {role === 'admin' && (
-//                 <Link
-//                   to="/admin"
-//                   className="text-sm font-medium py-2 text-primary flex items-center gap-2"
-//                   onClick={() => setMobileMenuOpen(false)}
-//                 >
-//                   <Shield className="h-4 w-4" />
-//                   Admin Dashboard
-//                 </Link>
-//               )}
-//               <div className="flex flex-col gap-2 pt-4 border-t border-border">
-//                 {user ? (
-//                   <>
-//                     <Button variant="outline" onClick={() => { navigate(getDashboardLink()); setMobileMenuOpen(false); }}>
-//                       Dashboard
-//                     </Button>
-//                     <Button variant="ghost" onClick={handleSignOut}>
-//                       Sign Out
-//                     </Button>
-//                   </>
-//                 ) : (
-//                   <>
-//                     <Button variant="outline" onClick={() => { navigate('/login'); setMobileMenuOpen(false); }}>
-//                       Sign In
-//                     </Button>
-//                     <Button onClick={() => { navigate('/signup'); setMobileMenuOpen(false); }}>
-//                       Get Started
-//                     </Button>
-//                   </>
-//                 )}
-//               </div>
-//             </div>
-//           </div>
-//         )}
-//       </div>
-//     </nav>
-//   );
-// };
-
-// *********************************888
-
-
-
-
-// import { Link, useNavigate } from 'react-router-dom';
-// import { Button } from '@/components/ui/button';
-// import { useAuth } from '@/contexts/AuthContext';
-// import { Scale, Menu, X, User, LogOut, Shield } from 'lucide-react';
-// import { useState } from 'react';
-// import {
-//   DropdownMenu,
-//   DropdownMenuContent,
-//   DropdownMenuItem,
-//   DropdownMenuSeparator,
-//   DropdownMenuTrigger,
-// } from '@/components/ui/dropdown-menu';
-
-// export const Navbar = () => {
-//   const { user, role, signOut } = useAuth();
-//   const navigate = useNavigate();
-//   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-//   const handleSignOut = async () => {
-//     await signOut();
-//     navigate('/');
-//   };
-
-//   const getDashboardLink = () => {
-//     switch (role) {
-//       case 'admin':
-//         return '/admin';
-//       case 'lawyer':
-//         return '/lawyer/dashboard';
-//       default:
-//         return '/dashboard';
-//     }
-//   };
-
-//   return (
-//     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
-//       <div className="container mx-auto px-4">
-//         <div className="flex items-center justify-between h-16">
-//           {/* Logo */}
-//           <Link to="/" className="flex items-center gap-2">
-//             <Scale className="h-8 w-8" />
-//             <span className="font-serif text-xl font-semibold tracking-tight">LEGALMATE</span>
-//           </Link>
-
-//           {/* Desktop Navigation */}
-//           <div className="hidden md:flex items-center gap-8">
-//             <Link to="/lawyers" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors underline-animation">
-//               Find Lawyerssss
-//             </Link>
-//             <Link to="/categories" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors underline-animation">
-//               Practice Areas
-//             </Link>
-//             <Link to="/how-it-works" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors underline-animation">
-//               How It Works
-//             </Link>
-//             {role === 'admin' && (
-//               <Link to="/admin" className="text-sm font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1">
-//                 <Shield className="h-4 w-4" />
-//                 Admin
-//               </Link>
-//             )}
-//           </div>
-
-//           {/* Auth Buttons */}
-//           <div className="hidden md:flex items-center gap-4">
-//             {user ? (
-//               <DropdownMenu>
-//                 <DropdownMenuTrigger asChild>
-//                   <Button variant="outline" size="sm" className="gap-2">
-//                     <User className="h-4 w-4" />
-//                     Account
-//                   </Button>
-//                 </DropdownMenuTrigger>
-//                 <DropdownMenuContent align="end" className="w-48">
-//                   <DropdownMenuItem onClick={() => navigate(getDashboardLink())}>
-//                     Dashboard
-//                   </DropdownMenuItem>
-//                   <DropdownMenuItem onClick={() => navigate('/settings')}>
-//                     Settings
-//                   </DropdownMenuItem>
-//                   <DropdownMenuSeparator />
-//                   <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
-//                     <LogOut className="h-4 w-4 mr-2" />
-//                     Sign Out
-//                   </DropdownMenuItem>
-//                 </DropdownMenuContent>
-//               </DropdownMenu>
-//             ) : (
-//               <>
-//                 <Button variant="ghost" size="sm" onClick={() => navigate('/login')}>
-//                   Sign In
-//                 </Button>
-//                 <Button size="sm" onClick={() => navigate('/signup')}>
-//                   Get Started
-//                 </Button>
-//               </>
-//             )}
-//           </div>
-
-//           {/* Mobile Menu Button */}
-//           <button
-//             className="md:hidden p-2"
-//             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-//           >
-//             {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-//           </button>
-//         </div>
-
-//         {/* Mobile Menu */}
-//         {mobileMenuOpen && (
-//           <div className="md:hidden py-4 border-t border-border animate-fade-in">
-//             <div className="flex flex-col gap-4">
-//               <Link
-//                 to="/lawyers"
-//                 className="text-sm font-medium py-2"
-//                 onClick={() => setMobileMenuOpen(false)}
-//               >
-//                 Find Lawyers
-//               </Link>
-//               <Link
-//                 to="/categories"
-//                 className="text-sm font-medium py-2"
-//                 onClick={() => setMobileMenuOpen(false)}
-//               >
-//                 Practice Areas
-//               </Link>
-//               <Link
-//                 to="/how-it-works"
-//                 className="text-sm font-medium py-2"
-//                 onClick={() => setMobileMenuOpen(false)}
-//               >
-//                 How It Works
-//               </Link>
-//               {role === 'admin' && (
-//                 <Link
-//                   to="/admin"
-//                   className="text-sm font-medium py-2 text-primary flex items-center gap-2"
-//                   onClick={() => setMobileMenuOpen(false)}
-//                 >
-//                   <Shield className="h-4 w-4" />
-//                   Admin Dashboard
-//                 </Link>
-//               )}
-//               <div className="flex flex-col gap-2 pt-4 border-t border-border">
-//                 {user ? (
-//                   <>
-//                     <Button variant="outline" onClick={() => { navigate(getDashboardLink()); setMobileMenuOpen(false); }}>
-//                       Dashboard
-//                     </Button>
-//                     <Button variant="ghost" onClick={handleSignOut}>
-//                       Sign Out
-//                     </Button>
-//                   </>
-//                 ) : (
-//                   <>
-//                     <Button variant="outline" onClick={() => { navigate('/login'); setMobileMenuOpen(false); }}>
-//                       Sign In
-//                     </Button>
-//                     <Button onClick={() => { navigate('/signup'); setMobileMenuOpen(false); }}>
-//                       Get Started
-//                     </Button>
-//                   </>
-//                 )}
-//               </div>
-//             </div>
-//           </div>
-//         )}
-//       </div>
-//     </nav>
-//   );
-// };
-
-
 
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { Scale, Menu, X, User, LogOut, Shield } from 'lucide-react';
+import { Scale, Menu, X, User, LogOut, Shield, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 import { NavDropdown } from './NavDropdown';
 import { MobileNavAccordion } from './MobileNavAccordion';
@@ -831,6 +183,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+
+
+
+export interface NavMenuItem {
+  label: string;
+  href: string;
+  description?: string;
+}
+export interface NavMenuSection {
+  title: string;
+  items: NavMenuItem[];
+}
+
 
 export const Navbar = () => {
   const { user, role, signOut } = useAuth();
@@ -854,48 +219,71 @@ export const Navbar = () => {
   };
 
   return (
-    // <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
-    <nav className="fixed top-[28px] left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
-      <div className="container mx-auto px-4">
+    <nav className="fixed top-0 left-0 right-0 z-[100] 
+    bg-background/70 backdrop-blur-xl border-b border-border/50 
+    shadow-sm transition-all duration-300">
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2">
-            <Scale className="h-8 w-8" />
-            <span className="font-serif text-xl font-semibold tracking-tight">LEGALMATE</span>
+
+          {/* LOGO */}
+          <Link to="/" className="flex items-center gap-2 group">
+            <Scale className="h-8 w-8 transition-transform group-hover:scale-110 duration-300" />
+            <span className="font-serif text-xl font-semibold tracking-tight 
+            group-hover:text-primary transition-colors duration-300">
+              LEGALMATE
+            </span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center gap-6">
+          {/* DESKTOP NAV */}
+          <div className="hidden lg:flex items-center gap-2">
             {navMenuConfig.map((section) => (
               <NavDropdown key={section.title} section={section} />
             ))}
+
             {role === 'admin' && (
-              <Link to="/admin" className="text-sm font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1">
+              <Link
+                to="/admin"
+                className="flex items-center gap-1 px-3 py-2 rounded-md text-sm font-medium text-primary hover:bg-primary/10 transition-all"
+              >
                 <Shield className="h-4 w-4" />
                 Admin
               </Link>
             )}
           </div>
 
-          {/* Auth Buttons */}
-          <div className="hidden lg:flex items-center gap-4">
+          {/* RIGHT SIDE */}
+          <div className="hidden lg:flex items-center gap-3">
+
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 rounded-full px-4 hover:bg-primary/10 transition-all"
+                  >
                     <User className="h-4 w-4" />
                     Account
+                    <ChevronDown className="h-3 w-3" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
+
+                <DropdownMenuContent align="end" className="w-52 bg-popover">
                   <DropdownMenuItem onClick={() => navigate(getDashboardLink())}>
                     Dashboard
                   </DropdownMenuItem>
+
                   <DropdownMenuItem onClick={() => navigate('/settings')}>
                     Settings
                   </DropdownMenuItem>
+
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
+
+                  <DropdownMenuItem
+                    onClick={handleSignOut}
+                    className="text-destructive"
+                  >
                     <LogOut className="h-4 w-4 mr-2" />
                     Sign Out
                   </DropdownMenuItem>
@@ -903,64 +291,110 @@ export const Navbar = () => {
               </DropdownMenu>
             ) : (
               <>
-                <Button variant="ghost" size="sm" onClick={() => navigate('/login')}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="rounded-full px-4"
+                  onClick={() => navigate('/login')}
+                >
                   Sign In
                 </Button>
-                <Button size="sm" onClick={() => navigate('/signup')}>
+
+                <Button
+                  size="sm"
+                  className="rounded-full px-5 shadow-md hover:shadow-lg transition-all"
+                  onClick={() => navigate('/signup')}
+                >
                   Get Started
                 </Button>
               </>
             )}
           </div>
 
-          {/* Mobile Menu Button */}
+          {/* MOBILE BUTTON */}
           <button
-            className="lg:hidden p-2"
+            className="lg:hidden p-2 rounded-lg hover:bg-secondary transition-all"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
         </div>
 
-        {/* Mobile Menu */}
+        {/* MOBILE MENU */}
         {mobileMenuOpen && (
-          <div className="lg:hidden py-4 border-t border-border animate-fade-in">
-            <div className="flex flex-col gap-2">
+          <div className="lg:hidden fixed top-16 left-0 right-0 z-[99] 
+          bg-background border-t border-border 
+          animate-in fade-in slide-in-from-top-2 duration-200 
+          max-h-[calc(100vh-4rem)] overflow-y-auto shadow-xl">
+
+            <div className="px-4 py-4 space-y-6">
+
+              {/* NAV SECTIONS */}
               <MobileNavAccordion
                 sections={navMenuConfig}
                 onNavigate={() => setMobileMenuOpen(false)}
               />
+
+              {/* ADMIN */}
               {role === 'admin' && (
-                <Link
-                  to="/admin"
-                  className="text-sm font-medium py-2 text-primary flex items-center gap-2"
-                  onClick={() => setMobileMenuOpen(false)}
+                <button
+                  className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-primary/5 hover:bg-primary/10 transition-all"
+                  onClick={() => {
+                    navigate('/admin');
+                    setMobileMenuOpen(false);
+                  }}
                 >
-                  <Shield className="h-4 w-4" />
-                  Admin Dashboard
-                </Link>
+                  <Shield className="h-5 w-5 text-primary" />
+                  <span className="font-medium text-sm">Admin Dashboard</span>
+                </button>
               )}
-              <div className="flex flex-col gap-2 pt-4 border-t border-border">
+
+              {/* AUTH */}
+              <div className="pt-4 border-t border-border space-y-2">
                 {user ? (
                   <>
-                    <Button variant="outline" onClick={() => { navigate(getDashboardLink()); setMobileMenuOpen(false); }}>
+                    <button
+                      className="w-full px-4 py-3 rounded-xl hover:bg-secondary text-left"
+                      onClick={() => {
+                        navigate(getDashboardLink());
+                        setMobileMenuOpen(false);
+                      }}
+                    >
                       Dashboard
-                    </Button>
-                    <Button variant="ghost" onClick={handleSignOut}>
+                    </button>
+
+                    <button
+                      className="w-full px-4 py-3 rounded-xl text-destructive hover:bg-destructive/10 text-left"
+                      onClick={handleSignOut}
+                    >
                       Sign Out
-                    </Button>
+                    </button>
                   </>
                 ) : (
                   <>
-                    <Button variant="outline" onClick={() => { navigate('/login'); setMobileMenuOpen(false); }}>
+                    <button
+                      className="w-full px-4 py-3 rounded-xl hover:bg-secondary text-left"
+                      onClick={() => {
+                        navigate('/login');
+                        setMobileMenuOpen(false);
+                      }}
+                    >
                       Sign In
-                    </Button>
-                    <Button onClick={() => { navigate('/signup'); setMobileMenuOpen(false); }}>
+                    </button>
+
+                    <button
+                      className="w-full px-4 py-3 rounded-xl bg-primary text-primary-foreground text-left"
+                      onClick={() => {
+                        navigate('/signup');
+                        setMobileMenuOpen(false);
+                      }}
+                    >
                       Get Started
-                    </Button>
+                    </button>
                   </>
                 )}
               </div>
+
             </div>
           </div>
         )}

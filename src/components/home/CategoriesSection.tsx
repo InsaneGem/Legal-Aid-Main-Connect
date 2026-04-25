@@ -1,7 +1,9 @@
+
+
 import { Link } from 'react-router-dom';
-import { 
-  Users, Shield, Building, Home, Globe, Briefcase, 
-  Calculator, Lightbulb, Scale, ShieldCheck, ArrowRight 
+import {
+  Users, Shield, Building, Home, Globe, Briefcase,
+  Calculator, Lightbulb, ArrowRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -18,40 +20,94 @@ const categories = [
 
 export const CategoriesSection = () => {
   return (
-    <section className="py-24">
-      <div className="container mx-auto px-4">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between mb-12">
-          <div>
-            <h2 className="font-serif text-3xl md:text-4xl font-bold mb-4">
-              Practice Areas
-            </h2>
-            <p className="text-muted-foreground max-w-xl">
-              Find lawyers specialized in your specific legal needs
-            </p>
-          </div>
-          <Button variant="ghost" className="mt-4 md:mt-0 group" asChild>
-            <Link to="/categories">
-              View All Areas
-              <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+    <section className="py-12 sm:py-16 -mt-5 md:-mt-5 md:py-20 bg-muted/30 ">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        {/* HEADER */}
+        <div className="text-center mb-10 sm:mb-14">
+          {/* <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">
+            Try once
+          </p> */}
+          <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl font-bold mb-2">
+            Practice Areas
+          </h2>
+          <p className="text-muted-foreground max-w-xl mx-auto text-sm sm:text-base">
+            Find lawyers specialized in your specific legal needs
+          </p>
+
+
+
+        </div>
+
+
+        {/* GRID */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-5">
+
+          {categories.map((category, index) => (
+            <Link
+              key={category.name}
+              to={`/login?role=client=${encodeURIComponent(category.name)}`}
+              className="
+                group
+                p-3 sm:p-4 md:p-5
+                rounded-lg sm:rounded-xl
+                border border-black/10
+                bg-background/80 backdrop-blur-md
+                shadow-sm
+                hover:shadow-md hover:-translate-y-0.5 hover:border-primary/30
+                transition-all duration-300
+              "
+              style={{ animationDelay: `${index * 0.04}s` }}
+            >
+              {/* ICON */}
+              <div className="
+                w-9 h-9 sm:w-10 sm:h-10
+                rounded-md
+                bg-primary/10
+                flex items-center justify-center
+                mb-2 sm:mb-3
+                group-hover:bg-primary
+                transition-all duration-300
+              ">
+                <category.icon className="h-4 w-4 sm:h-5 sm:w-5 text-primary group-hover:text-white transition-colors" />
+              </div>
+
+              {/* TITLE */}
+              <h3 className="font-medium text-sm sm:text-base leading-tight mb-0.5">
+                {category.name}
+              </h3>
+
+              {/* DESCRIPTION */}
+              <p className="text-[11px] sm:text-xs text-muted-foreground leading-snug">
+                {category.description}
+              </p>
+            </Link>
+
+
+          ))}
+
+
+        </div>
+        {/* BOTTOM CTA BUTTON */}
+        <div className="flex justify-center mt-8 sm:mt-10">
+          <Button
+            variant="outline"
+            size="sm"
+            className="group rounded-full px-5"
+            asChild
+          >
+            <Link to="/login?role=client">
+              View All
+              <ArrowRight className="ml-2 h-3 w-3 group-hover:translate-x-1 transition-transform" />
             </Link>
           </Button>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {categories.map((category, index) => (
-            <Link
-              key={category.name}
-              to={`/lawyers?category=${encodeURIComponent(category.name)}`}
-              className="group p-6 bg-card border border-border rounded-lg hover:shadow-card hover:border-primary/20 transition-all duration-300 animate-scale-in"
-              style={{ animationDelay: `${index * 0.05}s` }}
-            >
-              <category.icon className="h-8 w-8 mb-4 group-hover:scale-110 transition-transform" />
-              <h3 className="font-semibold mb-1">{category.name}</h3>
-              <p className="text-sm text-muted-foreground">{category.description}</p>
-            </Link>
-          ))}
-        </div>
+
       </div>
+
     </section>
+
+
   );
 };

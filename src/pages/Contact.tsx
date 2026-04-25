@@ -6,10 +6,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  Mail, 
-  Phone, 
-  MapPin, 
+import {
+  Mail,
+  Phone,
+  MapPin,
   Clock,
   Send,
   MessageSquare,
@@ -30,15 +30,15 @@ const Contact = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    
+
     // Simulate form submission
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     toast({
       title: 'Message Sent!',
       description: 'We will get back to you within 24 hours.',
     });
-    
+
     setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
     setSubmitting(false);
   };
@@ -52,14 +52,14 @@ const Contact = () => {
 
   return (
     <MainLayout>
-      {/* Hero Section */}
+
       <section className="hero-gradient py-20">
         <div className="container mx-auto px-4 text-center">
           <h1 className="font-serif text-4xl md:text-5xl font-bold text-white mb-6 animate-fade-in">
             Contact Us
           </h1>
           <p className="text-white/80 text-lg max-w-2xl mx-auto animate-fade-in">
-            Have questions? We're here to help. Reach out to our team and we'll 
+            Have questions? We're here to help. Reach out to our team and we'll
             respond as soon as possible.
           </p>
         </div>
@@ -74,11 +74,11 @@ const Contact = () => {
               <div>
                 <h2 className="font-serif text-2xl font-bold mb-6">Get in Touch</h2>
                 <p className="text-muted-foreground mb-8">
-                  Whether you have a question about our services, pricing, or anything else, 
+                  Whether you have a question about our services, pricing, or anything else,
                   our team is ready to answer all your questions.
                 </p>
               </div>
-              
+
               <Card className="card-premium">
                 <CardContent className="p-6">
                   <div className="flex items-start gap-4">
@@ -93,7 +93,7 @@ const Contact = () => {
                   </div>
                 </CardContent>
               </Card>
-              
+
               <Card className="card-premium">
                 <CardContent className="p-6">
                   <div className="flex items-start gap-4">
@@ -108,7 +108,7 @@ const Contact = () => {
                   </div>
                 </CardContent>
               </Card>
-              
+
               <Card className="card-premium">
                 <CardContent className="p-6">
                   <div className="flex items-start gap-4">
@@ -126,7 +126,7 @@ const Contact = () => {
                   </div>
                 </CardContent>
               </Card>
-              
+
               <Card className="card-premium">
                 <CardContent className="p-6">
                   <div className="flex items-start gap-4">
@@ -154,7 +154,7 @@ const Contact = () => {
                     <MessageSquare className="h-6 w-6 text-primary" />
                     <h2 className="font-serif text-2xl font-bold">Send us a Message</h2>
                   </div>
-                  
+
                   <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="grid md:grid-cols-2 gap-6">
                       <div className="space-y-2">
@@ -181,7 +181,7 @@ const Contact = () => {
                         />
                       </div>
                     </div>
-                    
+
                     <div className="grid md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <Label htmlFor="phone">Phone Number</Label>
@@ -206,7 +206,7 @@ const Contact = () => {
                         />
                       </div>
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="message">Message *</Label>
                       <Textarea
@@ -219,7 +219,7 @@ const Contact = () => {
                         required
                       />
                     </div>
-                    
+
                     <Button type="submit" size="lg" className="w-full md:w-auto" disabled={submitting}>
                       {submitting ? (
                         'Sending...'

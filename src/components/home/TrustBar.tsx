@@ -8,7 +8,7 @@ const badges = [
 export const TrustBar = () => {
   return (
     <section className="py-6 border-b border-border bg-secondary">
-      {/* <div className="container mx-auto px-4">
+      <div className="container mx-auto px-4">
         <div className="flex flex-wrap items-center justify-center gap-8 md:gap-16">
           {badges.map((badge) => (
             <div key={badge.label} className="flex items-center gap-2 text-muted-foreground">
@@ -17,7 +17,7 @@ export const TrustBar = () => {
             </div>
           ))}
         </div>
-      </div> */}
+      </div>
 
       <p className="new text-center text-sm text-muted-foreground"> TrustBar.tsx (later delete this section)</p>
     </section>

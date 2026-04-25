@@ -1,7 +1,3 @@
-
-// *******************************************
-
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -11,17 +7,20 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Send, Phone, Video, Clock, ArrowLeft,
   Loader2, MessageSquare, User, Shield,
   CheckCircle, Star, Lock, Timer,
   AlertTriangle, Wallet, PhoneOff,
-  Mic, Paperclip, Smile, XCircle
+  Mic, Paperclip, Smile, XCircle,
+  FileText, Image as ImageIcon
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { VideoCall } from '@/components/consultation/VideoCall';
 import { AudioCall } from '@/components/consultation/AudioCall';
 import { cn } from '@/lib/utils';
+import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react';
 
 interface Message {
   id: string;
@@ -67,14 +66,32 @@ const Consultation = () => {
   // Message state
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const [myAvatarUrl, setMyAvatarUrl] = useState<string | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch current user's avatar from profiles
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase
+      .from('profiles')
+      .select('avatar_url')
+      .eq('id', user.id)
+      .single()
+      .then(({ data }) => setMyAvatarUrl(data?.avatar_url ?? null));
+  }, [user?.id]);
+
 
   // Flow state
   const [lawyerAccepted, setLawyerAccepted] = useState(false);
   const [acceptedAt, setAcceptedAt] = useState<string | null>(null);
   const [paymentCountdown, setPaymentCountdown] = useState(120);
   const [sessionCountdown, setSessionCountdown] = useState(0);
+  // const [sessionCountdown, setSessionCountdown] = useState<number | null>(null);
   const [walletBalance, setWalletBalance] = useState(0);
   const [paying, setPaying] = useState(false);
 
@@ -100,28 +117,20 @@ const Consultation = () => {
   const isCompleted = consultation?.status === 'completed';
   const isCancelled = consultation?.status === 'cancelled';
 
-  // const isWaitingForAccept =
-  //   consultation?.status === 'pending' &&
-  //   consultation?.started_at === null &&
-  //   !consultation?.accepted_at;
+
   const isWaitingForAccept =
     consultation?.status === 'pending' &&
     consultation?.started_at === null &&
     !consultation?.accepted_at &&
     !lawyerAccepted;
 
-  // const isWaitingForPayment =
-  //   consultation?.status === 'pending' &&
-  //   consultation?.started_at === null &&
-  //   consultation?.accepted_at !== null;
   const isWaitingForPayment =
     consultation?.status === 'pending' &&
     consultation?.started_at === null &&
     (consultation?.accepted_at !== null || lawyerAccepted);
 
-  const chatEnabled =
-    consultation?.status === 'active' &&
-    consultation?.started_at !== null;
+
+  const chatEnabled = consultation?.status === 'active';
   const bookedMinutes = consultation?.duration_minutes || 10;
 
   // ─── Fetch ───
@@ -136,13 +145,18 @@ const Consultation = () => {
 
     if (error || !data) {
       toast({ variant: 'destructive', title: 'Error', description: 'Consultation not found.' });
-      // navigate('/dashboard');
-      navigate(user?.role === 'lawyer' ? '/lawyer/dashboard' : '/dashboard');
+
+      // navigate(user?.role === 'lawyer' ? '/lawyer/dashboard' : '/dashboard');
+      navigate(
+        consultation?.lawyer_id === user?.id
+          ? '/lawyer/dashboard'
+          : '/dashboard'
+      );
       return;
     }
 
     setConsultation(data as ConsultationData);
-    // 🔥 FORCE lawyerAccepted if accept signal exists OR still pending
+
 
     // 🔥 ALWAYS check if accepted signal exists
     const { data: acceptSignal } = await supabase
@@ -203,6 +217,7 @@ const Consultation = () => {
 
   // ─── Realtime: consultation changes ───
   useEffect(() => {
+
     if (!id) return;
     const channel = supabase
       .channel(`consultation-${id}`)
@@ -231,6 +246,29 @@ const Consultation = () => {
           toast({ title: 'Consultation Cancelled', description: 'This consultation was cancelled.' });
           setTimeout(() => navigate(updated.lawyer_id === user?.id ? '/lawyer/dashboard' : '/dashboard'), 2000);
         }
+        // if (
+        //   signal.type === 'start-audio-call' &&
+        //   signal.sender_id !== user?.id
+        // ) {
+        //   setIsAudioCallActive(true);
+
+        //   toast({
+        //     title: 'Incoming Audio Call',
+        //     description: `${participant?.full_name} started an audio call`
+        //   });
+        // }
+
+        // if (
+        //   signal.type === 'start-video-call' &&
+        //   signal.sender_id !== user?.id
+        // ) {
+        //   setIsVideoCallActive(true);
+
+        //   toast({
+        //     title: 'Incoming Video Call',
+        //     description: `${participant?.full_name} started a video call`
+        //   });
+        // }
       })
       .subscribe();
 
@@ -269,6 +307,29 @@ const Consultation = () => {
           table: 'call_signals',
           filter: `consultation_id=eq.${id}`,
         },
+        // async (payload) => {
+        //   const signal = payload.new as {
+        //     sender_id: string;
+        //     type: string;
+        //     created_at: string;
+        //   };
+
+        //   if (signal.type === 'lawyer-accepted') {
+        //     console.log("✅ Lawyer accepted signal received");
+
+        //     // 🔥 FORCE UI CHANGE IMMEDIATELY
+        //     setConsultation(prev => prev ? {
+        //       ...prev,
+        //       accepted_at: signal.created_at
+        //     } : prev);
+
+        //     setLawyerAccepted(true);
+        //     setAcceptedAt(signal.created_at);
+
+        //     // 🔥 OPTIONAL: still fetch for safety
+        //     fetchConsultation();
+        //   }
+        // }
         async (payload) => {
           const signal = payload.new as {
             sender_id: string;
@@ -276,29 +337,47 @@ const Consultation = () => {
             created_at: string;
           };
 
-          // if (signal.type === 'lawyer-accepted') {
-          //   console.log("✅ Lawyer accepted signal received");
-
-          //   setLawyerAccepted(true);
-          //   setAcceptedAt(signal.created_at);
-
-          //   // 🔥 FORCE FULL REFRESH
-          //   await fetchConsultation();
-          // }
+          // lawyer accepted
           if (signal.type === 'lawyer-accepted') {
-            console.log("✅ Lawyer accepted signal received");
-
-            // 🔥 FORCE UI CHANGE IMMEDIATELY
-            setConsultation(prev => prev ? {
-              ...prev,
-              accepted_at: signal.created_at
-            } : prev);
+            setConsultation(prev =>
+              prev
+                ? {
+                  ...prev,
+                  accepted_at: signal.created_at,
+                }
+                : prev
+            );
 
             setLawyerAccepted(true);
             setAcceptedAt(signal.created_at);
 
-            // 🔥 OPTIONAL: still fetch for safety
             fetchConsultation();
+          }
+
+          // incoming audio call
+          if (
+            signal.type === 'start-audio-call' &&
+            signal.sender_id !== user?.id
+          ) {
+            setIsAudioCallActive(true);
+
+            toast({
+              title: 'Incoming Audio Call',
+              description: `${participant?.full_name} started an audio call`,
+            });
+          }
+
+          // incoming video call
+          if (
+            signal.type === 'start-video-call' &&
+            signal.sender_id !== user?.id
+          ) {
+            setIsVideoCallActive(true);
+
+            toast({
+              title: 'Incoming Video Call',
+              description: `${participant?.full_name} started a video call`,
+            });
           }
         }
       )
@@ -316,22 +395,28 @@ const Consultation = () => {
 
   // ─── Session countdown ───
   useEffect(() => {
-    if (!isActive || !consultation?.started_at || !consultation?.duration_minutes) return;
+    if (!consultation) return;
+    if (consultation.status !== 'active') return;
+    if (!consultation.started_at) return;
 
-    const interval = setInterval(() => {
-      const startTime = new Date(consultation.started_at!).getTime();
-      const endTime = startTime + consultation.duration_minutes! * 60 * 1000;
+    const startTime = new Date(consultation.started_at).getTime();
+    const endTime = startTime + bookedMinutes * 60 * 1000;
+
+    const tick = () => {
       const remaining = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
       setSessionCountdown(remaining);
 
-      if (remaining <= 0 && !autoCompleteRef.current) {
-        autoCompleteRef.current = true;
+      if (remaining <= 0) {
         handleAutoComplete();
       }
-    }, 1000);
+    };
+
+    tick();
+    const interval = setInterval(tick, 1000);
 
     return () => clearInterval(interval);
-  }, [isActive, consultation?.started_at, consultation?.duration_minutes]);
+
+  }, [consultation, bookedMinutes]);
 
   // ─── Payment countdown (lawyer side) ───
   useEffect(() => {
@@ -354,41 +439,51 @@ const Consultation = () => {
   // ─── Actions ───
 
   const handleLawyerAccept = async () => {
-    if (!user || !id) return;
+  if (!user || !id) return;
 
-    const now = new Date().toISOString();
+  const now = new Date().toISOString();
 
-    // 1. Send signal (for realtime)
-    await supabase.from('call_signals').insert({
-      consultation_id: id,
-      sender_id: user.id,
-      type: 'lawyer-accepted',
-      data: {},
-    });
-
-    // ✅ 2. UPDATE CONSULTATION (CRITICAL FIX)
+  try {
     await supabase
       .from('consultations')
       .update({
+        accepted_at: now,
         status: 'pending',
-        started_at: null,
-        accepted_at: now   // 🔥 THIS IS THE MAIN FIX
       })
       .eq('id', id);
 
-    // 3. Local state update
+    await supabase
+      .from('call_signals')
+      .insert({
+        consultation_id: id,
+        sender_id: user.id,
+        type: 'lawyer-accepted',
+        data: {},
+      });
+
     setLawyerAccepted(true);
     setAcceptedAt(now);
+
+    await fetchConsultation();
 
     toast({
       title: '✅ Request Accepted',
       description: 'Waiting for client payment.',
     });
-  };
+  } catch {
+    toast({
+      variant: 'destructive',
+      title: 'Error',
+      description: 'Failed to accept consultation.',
+    });
+  }
+};
 
   const handleClientPay = async () => {
     if (!user || !id || !consultation) return;
     const totalAmount = consultation.total_amount || 0;
+    const now = new Date().toISOString();
+
 
     if (walletBalance < totalAmount) {
       toast({ variant: 'destructive', title: 'Insufficient Balance', description: 'Please add funds to your wallet.' });
@@ -501,12 +596,146 @@ const Consultation = () => {
     }
     setSending(false);
   };
+  const handleEmojiSelect = (emoji: EmojiClickData) => {
+    setNewMessage((prev) => prev + emoji.emoji);
+    setEmojiOpen(false);
+    inputRef.current?.focus();
+  };
+
+  const handleFileUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+
+    if (!file || !user || !id || !chatEnabled) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        variant: 'destructive',
+        title: 'File too large',
+        description: 'Max file size is 10MB.',
+      });
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `${id}/${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2)}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('chat-attachments')
+        .upload(path, file, {
+          contentType: file.type,
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: signed } = await supabase.storage
+        .from('chat-attachments')
+        .createSignedUrl(path, 60 * 60 * 24 * 7);
+
+      const url = signed?.signedUrl || '';
+      const isImage = file.type.startsWith('image/');
+
+      const content = isImage
+        ? `📎 [image] ${file.name}\n${url}`
+        : `📎 [file] ${file.name}\n${url}`;
+
+      await supabase.from('messages').insert({
+        consultation_id: id,
+        sender_id: user.id,
+        content,
+      });
+
+      toast({
+        title: 'File sent',
+        description: file.name,
+      });
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Upload failed',
+        description: err.message || 'Try again.',
+      });
+    } finally {
+      setUploading(false);
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const renderMessageContent = (content: string) => {
+    if (content.startsWith('📎 [')) {
+      const lines = content.split('\n');
+      const header = lines[0];
+      const url = lines[1];
+
+      const isImage = header.startsWith('📎 [image]');
+      const filename = header.replace(
+        /^📎 \[(image|file)\]\s*/,
+        ''
+      );
+
+      if (isImage && url) {
+        return (
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block"
+          >
+            <img
+              src={url}
+              alt={filename}
+              className="rounded-lg max-w-[240px] max-h-[240px] object-cover"
+            />
+            <p className="text-xs mt-1 opacity-80">
+              {filename}
+            </p>
+          </a>
+        );
+      }
+
+      if (url) {
+        return (
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 underline"
+          >
+            <FileText className="h-4 w-4" />
+            {filename}
+          </a>
+        );
+      }
+    }
+
+    return (
+      <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+        {content}
+      </p>
+    );
+  };
 
   // ─── Helpers ───
-  const formatCountdown = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  const formatCountdown = (seconds: number | null | undefined) => {
+    if (seconds == null || isNaN(seconds)) return "00:00";
+
+    const safeSeconds = Math.max(0, seconds);
+
+    const m = Math.floor(safeSeconds / 60);
+    const s = safeSeconds % 60;
+
+    return `${m.toString().padStart(2, '0')}:${s
+      .toString()
+      .padStart(2, '0')}`;
   };
 
   const getTypeIcon = () => {
@@ -575,12 +804,13 @@ const Consultation = () => {
           {isActive && (
             <div className={cn(
               "flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full font-mono text-xs sm:text-sm font-semibold",
-              sessionCountdown <= 60
+              (sessionCountdown ?? 0) <= 60
                 ? "bg-destructive/10 text-destructive animate-pulse"
                 : "bg-primary/10 text-primary"
             )}>
               <Timer className="h-3.5 w-3.5" />
-              {formatCountdown(sessionCountdown)}
+              {/* {formatCountdown(sessionCountdown)} */}
+              {sessionCountdown !== null && formatCountdown(sessionCountdown)}
             </div>
           )}
 
@@ -590,7 +820,19 @@ const Consultation = () => {
               variant="outline"
               size="icon"
               className="h-8 w-8 sm:h-9 sm:w-9"
-              onClick={() => setIsAudioCallActive(true)}
+              // onClick={() => setIsAudioCallActive(true)}
+              onClick={async () => {
+                if (!user || !id) return;
+
+                await supabase.from('call_signals').insert({
+                  consultation_id: id,
+                  sender_id: user.id,
+                  type: 'start-audio-call',
+                  data: {}
+                });
+
+                setIsAudioCallActive(true);
+              }}
             >
               <Phone className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </Button>
@@ -600,7 +842,19 @@ const Consultation = () => {
               variant="outline"
               size="icon"
               className="h-8 w-8 sm:h-9 sm:w-9"
-              onClick={() => setIsVideoCallActive(true)}
+              // onClick={() => setIsVideoCallActive(true)}
+              onClick={async () => {
+                if (!user || !id) return;
+
+                await supabase.from('call_signals').insert({
+                  consultation_id: id,
+                  sender_id: user.id,
+                  type: 'start-video-call',
+                  data: {}
+                });
+
+                setIsVideoCallActive(true);
+              }}
             >
               <Video className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </Button>
@@ -832,61 +1086,102 @@ const Consultation = () => {
           )}
 
           {/* ─── ACTIVE SESSION: CHAT ─── */}
-          {/* {(isActive || isCompleted) && ( */}
+
+          {/* ─── ACTIVE SESSION: CHAT ─── */}
           {!isWaitingForAccept && !isWaitingForPayment && (isActive || isCompleted) && (
             <>
-              {/* Messages area */}
-              <div className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6">
-                <div className="max-w-2xl mx-auto space-y-3">
+              {/* Messages Area */}
+              <div
+                className="flex-1 overflow-y-auto px-3 py-4 sm:px-5 sm:py-5 lg:px-8 lg:py-6 relative"
+                style={{
+                  backgroundImage: `
+                 radial-gradient(circle at 10% 20%, hsl(var(--primary) / 0.10), transparent 35%),
+                   radial-gradient(circle at 85% 80%, hsl(var(--accent) / 0.10), transparent 40%),
+                 radial-gradient(circle at 50% 50%, hsl(var(--secondary) / 0.12), transparent 45%),
+                   linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--secondary) / 0.35) 100%)
+                 `,
+                }}
+              >
+                <div className="max-w-3xl mx-auto space-y-4">
                   {/* Encryption badge */}
-                  <div className="flex justify-center my-4">
-                    <div className="bg-secondary/50 border border-border rounded-full px-3 py-1.5 text-xs text-muted-foreground flex items-center gap-1.5">
-                      <Shield className="h-3 w-3" />
-                      End-to-end encrypted
+                  <div className="flex justify-center my-4 animate-fade-in">
+                    <div className="rounded-full border border-emerald-500/20 bg-white/60 dark:bg-black/20 backdrop-blur-xl px-4 py-2 shadow-sm flex items-center gap-2 text-xs sm:text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                      <Shield className="h-4 w-4" />
+                      <span>End-to-end encrypted</span>
                     </div>
                   </div>
 
                   {messages.length === 0 && isActive && (
-                    <div className="text-center py-12">
-                      <div className="w-14 h-14 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-3">
-                        <MessageSquare className="h-7 w-7 text-emerald-600" />
+                    <div className="text-center py-14">
+                      <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/10 flex items-center justify-center mx-auto mb-4 shadow-sm">
+                        <MessageSquare className="h-8 w-8 text-primary" />
                       </div>
-                      <h3 className="font-semibold mb-1">Session Started</h3>
-                      <p className="text-sm text-muted-foreground">Send a message to begin.</p>
+                      <h3 className="font-bold text-base sm:text-lg mb-1">Session Started</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Send your first message to begin the consultation.
+                      </p>
                     </div>
                   )}
 
                   {messages.map((message, index) => {
                     const isOwn = message.sender_id === user?.id;
-                    const showAvatar = index === 0 || messages[index - 1]?.sender_id !== message.sender_id;
+                    const showAvatar =
+                      index === 0 || messages[index - 1]?.sender_id !== message.sender_id;
 
                     return (
                       <div
                         key={message.id}
-                        className={cn("flex gap-2 sm:gap-3 animate-fade-in", isOwn && "flex-row-reverse")}
+                        className={cn(
+                          "flex gap-2 sm:gap-3 animate-fade-in",
+                          isOwn && "flex-row-reverse"
+                        )}
                       >
                         {showAvatar ? (
-                          <Avatar className="h-7 w-7 sm:h-8 sm:w-8 flex-shrink-0">
-                            <AvatarImage src={isOwn ? user?.user_metadata?.avatar_url : participant?.avatar_url || undefined} />
-                            <AvatarFallback className="text-xs">
-                              {isOwn ? user?.email?.charAt(0).toUpperCase() : participant?.full_name?.charAt(0)}
+                          <Avatar className="h-8 w-8 sm:h-9 sm:w-9 flex-shrink-0 border border-border shadow-sm">
+                            <AvatarImage
+                              src={
+                                isOwn
+                                  ? myAvatarUrl || undefined
+                                  : participant?.avatar_url || undefined
+                              }
+                            />
+                            <AvatarFallback className="text-xs font-semibold bg-primary/10">
+                              {isOwn
+                                ? user?.email?.charAt(0).toUpperCase()
+                                : participant?.full_name?.charAt(0)}
                             </AvatarFallback>
                           </Avatar>
                         ) : (
-                          <div className="w-7 sm:w-8" />
+                          <div className="w-8 sm:w-9" />
                         )}
 
-                        <div className={cn("max-w-[75%] sm:max-w-[70%]", isOwn ? "items-end" : "items-start")}>
-                          <div className={cn(
-                            "px-3 sm:px-4 py-2 sm:py-3 rounded-2xl text-sm leading-relaxed",
-                            isOwn
-                              ? "bg-primary text-primary-foreground rounded-br-md"
-                              : "bg-card border border-border rounded-bl-md"
-                          )}>
-                            {message.content}
+                        <div
+                          className={cn(
+                            "max-w-[82%] sm:max-w-[72%]",
+                            isOwn ? "items-end" : "items-start"
+                          )}
+                        >
+                          <div
+                            className={cn(
+                              "px-4 py-3 rounded-3xl text-sm sm:text-[15px] leading-relaxed shadow-sm backdrop-blur-md border",
+                              isOwn
+                                ? "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground border-primary/20 rounded-br-md"
+                                : "bg-white/80 dark:bg-card/80 border-border rounded-bl-md"
+                            )}
+                          >
+                            {renderMessageContent(message.content)}
                           </div>
-                          <p className={cn("text-[10px] sm:text-xs text-muted-foreground mt-0.5 px-1", isOwn && "text-right")}>
-                            {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+
+                          <p
+                            className={cn(
+                              "text-[10px] sm:text-xs text-muted-foreground mt-1 px-2",
+                              isOwn && "text-right"
+                            )}
+                          >
+                            {new Date(message.created_at).toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
                           </p>
                         </div>
                       </div>
@@ -897,13 +1192,32 @@ const Consultation = () => {
                 </div>
               </div>
 
-              {/* Message input */}
+              {/* Message Input */}
               {chatEnabled && (
-                <div className="p-2 sm:p-3 border-t border-border bg-card/80 backdrop-blur-sm flex-shrink-0">
-                  <form onSubmit={sendMessage} className="max-w-2xl mx-auto">
-                    <div className="flex items-center gap-1.5 sm:gap-2 bg-secondary/50 rounded-xl p-1.5 sm:p-2">
-                      <Button type="button" variant="ghost" size="icon" className="flex-shrink-0 h-8 w-8">
-                        <Paperclip className="h-4 w-4 text-muted-foreground" />
+                <div className="border-t border-border bg-white/70 dark:bg-card/70 backdrop-blur-xl p-2 sm:p-3 lg:p-4 flex-shrink-0">
+                  <form onSubmit={sendMessage} className="max-w-3xl mx-auto">
+                    <div className="flex items-center gap-2 rounded-2xl border border-border bg-background/80 backdrop-blur-md p-2 shadow-sm">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        className="hidden"
+                        accept="image/*,application/pdf,.doc,.docx,.txt"
+                        onChange={handleFileUpload}
+                      />
+
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 rounded-xl"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploading}
+                      >
+                        {uploading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Paperclip className="h-4 w-4 text-muted-foreground" />
+                        )}
                       </Button>
 
                       <Input
@@ -911,37 +1225,78 @@ const Consultation = () => {
                         placeholder="Type your message..."
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
-                        className="flex-1 border-0 bg-transparent focus-visible:ring-0 text-sm sm:text-base h-8 sm:h-9"
+                        className="flex-1 border-0 bg-transparent focus-visible:ring-0 h-10 text-sm sm:text-base"
                         disabled={sending}
                       />
 
-                      <Button type="button" variant="ghost" size="icon" className="flex-shrink-0 h-8 w-8">
-                        <Smile className="h-4 w-4 text-muted-foreground" />
-                      </Button>
+                      <Popover open={emojiOpen} onOpenChange={setEmojiOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 rounded-xl"
+                          >
+                            <Smile className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                        </PopoverTrigger>
+
+                        <PopoverContent
+                          align="end"
+                          side="top"
+                          className="p-0 border-0 w-auto bg-transparent shadow-none"
+                        >
+                          <EmojiPicker
+                            onEmojiClick={handleEmojiSelect}
+                            theme={Theme.AUTO}
+                            width={320}
+                            height={400}
+                          />
+                        </PopoverContent>
+                      </Popover>
 
                       <Button
                         type="submit"
-                        size="icon"
                         disabled={sending || !newMessage.trim()}
-                        className="flex-shrink-0 h-8 w-8 sm:h-9 sm:w-9 rounded-lg"
+                        className="h-10 w-10 rounded-xl shadow-sm"
+                        size="icon"
                       >
-                        {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                        {sending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Send className="h-4 w-4" />
+                        )}
                       </Button>
                     </div>
                   </form>
                 </div>
               )}
-
-              {/* Completed footer */}
-              {isCompleted && !showRating && (
-                <div className="p-4 sm:p-6 border-t border-border bg-secondary/30 text-center flex-shrink-0">
-                  <p className="text-muted-foreground text-sm mb-2">This consultation has ended.</p>
-                  <Button variant="outline" onClick={() => navigate(isLawyer ? '/lawyer/dashboard' : '/dashboard')}>
-                    Return to Dashboard
-                  </Button>
-                </div>
-              )}
             </>
+          )}
+
+
+
+
+
+          {/* Completed footer */}
+          {isCompleted && !showRating && (
+            <div className="p-4 sm:p-6 border-t border-border bg-secondary/30 text-center flex-shrink-0">
+              <p className="text-muted-foreground text-sm mb-2">
+                This consultation has ended.
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (isClient) {
+                    setShowRating(true);
+                  } else {
+                    navigate('/lawyer/dashboard');
+                  }
+                }}
+              >
+                Return to Dashboard
+              </Button>
+            </div>
           )}
 
           {/* ─── CANCELLED ─── */}
@@ -952,8 +1307,14 @@ const Consultation = () => {
                   <XCircle className="h-8 w-8 text-destructive" />
                 </div>
                 <h2 className="text-xl font-bold mb-2">Consultation Cancelled</h2>
-                <p className="text-sm text-muted-foreground mb-6">This consultation has been cancelled.</p>
-                <Button onClick={() => navigate(isLawyer ? '/lawyer/dashboard' : '/dashboard')}>
+                <p className="text-sm text-muted-foreground mb-6">
+                  This consultation has been cancelled.
+                </p>
+                <Button
+                  onClick={() =>
+                    navigate(isLawyer ? '/lawyer/dashboard' : '/dashboard')
+                  }
+                >
                   Return to Dashboard
                 </Button>
               </div>
@@ -963,18 +1324,26 @@ const Consultation = () => {
       </div>
 
       {/* ═══ RATING DIALOG ═══ */}
-      <Dialog open={showRating && isClient} onOpenChange={(open) => { if (!open) { setShowRating(false); navigate('/dashboard'); } }}>
+      <Dialog
+        open={showRating && isClient}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowRating(false);
+            navigate('/dashboard');
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-[400px] p-0 gap-0 overflow-hidden rounded-2xl">
           <div className="p-6 sm:p-8 text-center">
             <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
               <Star className="h-7 w-7 text-primary" />
             </div>
+
             <h3 className="text-lg font-bold mb-1">Rate Your Experience</h3>
             <p className="text-sm text-muted-foreground mb-5">
               How was your session with {participant?.full_name}?
             </p>
 
-            {/* Stars */}
             <div className="flex justify-center gap-2 mb-5">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
@@ -982,12 +1351,14 @@ const Consultation = () => {
                   onClick={() => setSelectedRating(star)}
                   className="transition-transform hover:scale-110"
                 >
-                  <Star className={cn(
-                    "h-8 w-8 sm:h-10 sm:w-10 transition-colors",
-                    star <= selectedRating
-                      ? "fill-amber-400 text-amber-400"
-                      : "text-muted-foreground/30"
-                  )} />
+                  <Star
+                    className={cn(
+                      "h-8 w-8 sm:h-10 sm:w-10 transition-colors",
+                      star <= selectedRating
+                        ? "fill-amber-400 text-amber-400"
+                        : "text-muted-foreground/30"
+                    )}
+                  />
                 </button>
               ))}
             </div>
@@ -1003,16 +1374,24 @@ const Consultation = () => {
               <Button
                 variant="outline"
                 className="flex-1"
-                onClick={() => { setShowRating(false); navigate('/dashboard'); }}
+                onClick={() => {
+                  setShowRating(false);
+                  navigate('/dashboard');
+                }}
               >
                 Skip
               </Button>
+
               <Button
                 className="flex-1 gap-1.5"
                 disabled={selectedRating === 0 || submittingRating}
                 onClick={handleSubmitRating}
               >
-                {submittingRating ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                {submittingRating ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <CheckCircle className="h-4 w-4" />
+                )}
                 Submit
               </Button>
             </div>
@@ -1020,17 +1399,23 @@ const Consultation = () => {
         </DialogContent>
       </Dialog>
 
-      {/* ═══ MOOD DIALOG (Lawyer - payment timeout) ═══ */}
+      {/* ═══ MOOD DIALOG ═══ */}
       <Dialog open={showMoodDialog} onOpenChange={() => { }}>
         <DialogContent className="sm:max-w-[380px] p-0 gap-0 overflow-hidden rounded-2xl [&>button]:hidden">
           <div className="p-6 sm:p-8 text-center">
             <div className="w-14 h-14 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
               <AlertTriangle className="h-7 w-7 text-amber-600" />
             </div>
-            <h3 className="text-lg font-bold mb-1">Client Changed Their Mind</h3>
+
+            <h3 className="text-lg font-bold mb-1">
+              Client Changed Their Mind
+            </h3>
+
             <p className="text-sm text-muted-foreground mb-6">
-              The client was unable to complete the payment within the allotted time. The consultation has been cancelled.
+              The client was unable to complete the payment within the allotted
+              time. The consultation has been cancelled.
             </p>
+
             <Button className="w-full" onClick={handleCancelPaymentTimeout}>
               Return to Dashboard
             </Button>
@@ -1045,22 +1430,15 @@ const Consultation = () => {
         participantName={participant?.full_name || 'Participant'}
         consultationId={id || ''}
       />
+
       <AudioCall
         isActive={isAudioCallActive}
         onEnd={() => setIsAudioCallActive(false)}
         participantName={participant?.full_name || 'Participant'}
         consultationId={id || ''}
       />
-    </div>
+    </div >
   );
-};
+}
 
 export default Consultation;
-
-
-// ********************************************8
-// *******************************************8
-
-
-
-

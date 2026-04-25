@@ -35,7 +35,7 @@ export const useWebRTC = ({
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [connectionState, setConnectionState] = useState<RTCPeerConnectionState>('new');
   const [isConnecting, setIsConnecting] = useState(false);
-  
+
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
   const hasInitiatedRef = useRef(false);
@@ -107,7 +107,7 @@ export const useWebRTC = ({
   // Send signaling data
   const sendSignal = useCallback(async (type: string, data: SignalData) => {
     if (!user) return;
-    
+
     await supabase.from('call_signals').insert({
       consultation_id: consultationId,
       sender_id: user.id,
@@ -119,51 +119,81 @@ export const useWebRTC = ({
   // Create and send offer
   const createOffer = useCallback(async (pc: RTCPeerConnection) => {
     try {
+      // Prevent duplicate offer creation
+      if (pc.signalingState !== "stable") return;
+
       const offer = await pc.createOffer();
+
       await pc.setLocalDescription(offer);
-      await sendSignal('offer', { sdp: offer });
+
+      await sendSignal('offer', {
+        sdp: offer
+      });
+
     } catch (error) {
       console.error('Error creating offer:', error);
     }
   }, [sendSignal]);
 
   // Handle received offer
-  const handleOffer = useCallback(async (sdp: RTCSessionDescriptionInit) => {
-    if (!peerConnectionRef.current) return;
-    
-    try {
-      await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(sdp));
-      
-      // Add any pending ICE candidates
-      for (const candidate of pendingCandidatesRef.current) {
-        await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidate));
-      }
-      pendingCandidatesRef.current = [];
-      
-      const answer = await peerConnectionRef.current.createAnswer();
-      await peerConnectionRef.current.setLocalDescription(answer);
-      await sendSignal('answer', { sdp: answer });
-    } catch (error) {
-      console.error('Error handling offer:', error);
+ const handleOffer = useCallback(async (sdp: RTCSessionDescriptionInit) => {
+  if (!peerConnectionRef.current) return;
+
+  try {
+    if (
+      peerConnectionRef.current.signalingState !== "stable"
+    ) return;
+
+    await peerConnectionRef.current.setRemoteDescription(
+      new RTCSessionDescription(sdp)
+    );
+
+    for (const candidate of pendingCandidatesRef.current) {
+      await peerConnectionRef.current.addIceCandidate(
+        new RTCIceCandidate(candidate)
+      );
     }
-  }, [sendSignal]);
+
+    pendingCandidatesRef.current = [];
+
+    const answer = await peerConnectionRef.current.createAnswer();
+
+    await peerConnectionRef.current.setLocalDescription(answer);
+
+    await sendSignal('answer', {
+      sdp: answer
+    });
+
+  } catch (error) {
+    console.error('Error handling offer:', error);
+  }
+}, [sendSignal]);
 
   // Handle received answer
   const handleAnswer = useCallback(async (sdp: RTCSessionDescriptionInit) => {
-    if (!peerConnectionRef.current) return;
-    
-    try {
-      await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(sdp));
-      
-      // Add any pending ICE candidates
-      for (const candidate of pendingCandidatesRef.current) {
-        await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidate));
-      }
-      pendingCandidatesRef.current = [];
-    } catch (error) {
-      console.error('Error handling answer:', error);
+  if (!peerConnectionRef.current) return;
+
+  try {
+    if (
+      peerConnectionRef.current.signalingState === "have-local-offer"
+    ) {
+      await peerConnectionRef.current.setRemoteDescription(
+        new RTCSessionDescription(sdp)
+      );
     }
-  }, []);
+
+    for (const candidate of pendingCandidatesRef.current) {
+      await peerConnectionRef.current.addIceCandidate(
+        new RTCIceCandidate(candidate)
+      );
+    }
+
+    pendingCandidatesRef.current = [];
+
+  } catch (error) {
+    console.error('Error handling answer:', error);
+  }
+}, []);
 
   // Handle received ICE candidate
   const handleIceCandidate = useCallback(async (candidate: RTCIceCandidateInit) => {
@@ -171,7 +201,7 @@ export const useWebRTC = ({
       pendingCandidatesRef.current.push(candidate);
       return;
     }
-    
+
     if (peerConnectionRef.current.remoteDescription) {
       try {
         await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidate));
@@ -185,32 +215,43 @@ export const useWebRTC = ({
 
   // Initialize the call
   const initiateCall = useCallback(async () => {
-    if (!user || hasInitiatedRef.current) return;
-    
-    setIsConnecting(true);
-    hasInitiatedRef.current = true;
+  if (!user || hasInitiatedRef.current) return;
 
-    const stream = await startLocalStream();
-    if (!stream) {
-      setIsConnecting(false);
-      return;
-    }
+  setIsConnecting(true);
+  hasInitiatedRef.current = true;
 
-    const pc = createPeerConnection(stream);
-    
-    // Signal call start
-    await sendSignal('call-start', {});
-    
-    // Create offer after a short delay to allow other participant to set up
-    setTimeout(() => createOffer(pc), 1000);
-    
+  const stream = await startLocalStream();
+
+  if (!stream) {
     setIsConnecting(false);
-  }, [user, startLocalStream, createPeerConnection, sendSignal, createOffer]);
+    return;
+  }
+
+  const pc = createPeerConnection(stream);
+
+  // Signal call start
+  await sendSignal('call-start', {});
+
+  // IMPORTANT: Create only ONE offer
+  setTimeout(async () => {
+    if (pc.signalingState === "stable") {
+      await createOffer(pc);
+    }
+  }, 1000);
+
+  setIsConnecting(false);
+}, [
+  user,
+  startLocalStream,
+  createPeerConnection,
+  sendSignal,
+  createOffer
+]);
 
   // Join an existing call
   const joinCall = useCallback(async () => {
     if (!user || hasInitiatedRef.current) return;
-    
+
     setIsConnecting(true);
     hasInitiatedRef.current = true;
 
@@ -229,12 +270,12 @@ export const useWebRTC = ({
     if (user) {
       await sendSignal('call-end', {});
     }
-    
+
     if (peerConnectionRef.current) {
       peerConnectionRef.current.close();
       peerConnectionRef.current = null;
     }
-    
+
     stopStreams();
     hasInitiatedRef.current = false;
     setConnectionState('new');
@@ -267,26 +308,7 @@ export const useWebRTC = ({
     if (!isActive || !user) return;
 
     // Check for existing call-start signals first
-    const checkExistingCall = async () => {
-      const { data } = await supabase
-        .from('call_signals')
-        .select('*')
-        .eq('consultation_id', consultationId)
-        .eq('type', 'call-start')
-        .neq('sender_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (data && data.length > 0) {
-        // Someone else started the call, join it
-        await joinCall();
-      } else {
-        // We're starting the call
-        await initiateCall();
-      }
-    };
-
-    checkExistingCall();
+ 
 
     // Subscribe to new signals
     const channel = supabase
@@ -307,33 +329,52 @@ export const useWebRTC = ({
           };
 
           // Ignore our own signals
-          if (signal.sender_id === user.id) return;
+         if (signal.sender_id === user.id) return;
 
-          switch (signal.type) {
-            case 'call-start':
-              if (!hasInitiatedRef.current) {
-                await joinCall();
-              }
-              break;
-            case 'offer':
-              if (signal.data.sdp) {
-                await handleOffer(signal.data.sdp);
-              }
-              break;
-            case 'answer':
-              if (signal.data.sdp) {
-                await handleAnswer(signal.data.sdp);
-              }
-              break;
-            case 'ice-candidate':
-              if (signal.data.candidate) {
-                await handleIceCandidate(signal.data.candidate);
-              }
-              break;
-            case 'call-end':
-              await endCall();
-              break;
-          }
+switch (signal.type) {
+case 'call-start':
+  if (
+    !hasInitiatedRef.current &&
+    !peerConnectionRef.current
+  ) {
+    await joinCall();
+  }
+  break;
+
+  case 'offer':
+    if (signal.data.sdp) {
+      await handleOffer(signal.data.sdp);
+    }
+    break;
+
+  case 'answer':
+    if (signal.data.sdp) {
+      await handleAnswer(signal.data.sdp);
+    }
+    break;
+
+  case 'ice-candidate':
+    if (signal.data.candidate) {
+      await handleIceCandidate(signal.data.candidate);
+    }
+    break;
+
+  case 'call-accepted':
+    console.log('Call accepted by remote user');
+    break;
+
+  case 'call-end':
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.close();
+      peerConnectionRef.current = null;
+    }
+
+    stopStreams();
+    hasInitiatedRef.current = false;
+    setConnectionState('new');
+    pendingCandidatesRef.current = [];
+    break;
+}
         }
       )
       .subscribe();
@@ -350,21 +391,25 @@ export const useWebRTC = ({
 
   // Cleanup on unmount
   useEffect(() => {
-    return () => {
-      if (peerConnectionRef.current) {
-        peerConnectionRef.current.close();
-      }
-      stopStreams();
-    };
-  }, [stopStreams]);
+  return () => {
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.close();
+    }
+
+    hasInitiatedRef.current = false;
+    stopStreams();
+  };
+}, [stopStreams]);
 
   return {
-    localStream,
-    remoteStream,
-    connectionState,
-    isConnecting,
-    toggleAudio,
-    toggleVideo,
-    endCall,
+  localStream,
+  remoteStream,
+  connectionState,
+  isConnecting,
+  initiateCall,
+  joinCall,
+  toggleAudio,
+  toggleVideo,
+  endCall,
   };
 };

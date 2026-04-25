@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 // import { MainLayout } from '@/components/layout/MainLayout';
 import { ClientLayout } from '@/components/layout/ClientLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import dashboardHeroBg from '@/assets/Header.jpg';
+import dashboardHeroBg from '@/assets/Client-lawyer-Header.jpg';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -389,7 +389,10 @@ const ClientDashboard = () => {
 
           {/* Header Section */}
           <div
-            className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between mb-12 rounded-2xl p-6 sm:p-8 lg:p-10 overflow-hidden border border-border min-h-[280px] sm:min-h-[340px] lg:min-h-[400px] bg-black" style={{
+            className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between
+                   mb-10 rounded-2xl p-6 sm:p-8 lg:p-10 overflow-hidden border border-border
+               min-h-[280px] sm:min-h-[340px] lg:min-h-[400px] bg-black"
+            style={{
               backgroundImage: `url(${dashboardHeroBg})`,
               backgroundSize: "cover",
               backgroundPosition: "center",
@@ -398,8 +401,8 @@ const ClientDashboard = () => {
           >
 
             {/* Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/75 to-black/50 backdrop-blur-[2px]"></div>
-
+            <div className="absolute inset-0 bg-black/45 sm:bg-black/15" />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
             <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8 w-full">
 
               {/* LEFT SIDE */}
@@ -435,36 +438,40 @@ const ClientDashboard = () => {
                 </div>
 
                 {/* Status badges */}
-                <div className="flex flex-wrap items-center gap-2 mt-2">
 
-                  <Badge variant="outline" className="gap-1.5 bg-white ">
-                    <Activity className="h-3 w-3" />
-                    Real-time Sync
-                  </Badge>
 
-                  <Badge variant="outline" className="gap-1.5 bg-white">
-                    <Shield className="h-3 w-3" />
-                    Verified Account
-                  </Badge>
+                <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
 
-                  <Badge variant="outline" className="gap-1.5 bg-white">
-                    <Lock className="h-3 w-3" />
-                    Secure Legal Platform
-                  </Badge>
+                  <div className="flex items-center gap-2 text-white/90">
+                    <Activity className="h-4 w-4" />
+                    <span className="text-sm">Real-time Sync</span>
+                  </div>
 
-                  <Badge variant="outline" className="gap-1.5 bg-white ">
-                    <Calendar className="h-3 w-3" />
-                    {new Date().toLocaleDateString()}
-                  </Badge>
+                  <div className="flex items-center gap-2 text-white/90">
+                    <Shield className="h-4 w-4 text-emerald-400" />
+                    <span className="text-sm">Secure Platform</span>
+                  </div>
 
-                  <Badge variant="outline" className="gap-1.5 bg-white ">
-                    <CreditCard className="h-3 w-3" />
-                    Secure Payment
-                  </Badge>
-                  <Badge variant="outline" className="gap-1.5 bg-white ">
-                    <BadgeCheck className="h-3 w-3" />
-                    Licensed Lawyer
-                  </Badge>
+                  <div className="flex items-center gap-2 text-white/90">
+                    <BadgeCheck className="h-4 w-4 text-blue-400" />
+                    <span className="text-sm">Verified Account</span>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-white/90">
+                    <Calendar className="h-4 w-4" />
+                    <span className="text-sm">{new Date().toLocaleDateString()}</span>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-white/90">
+                    <CreditCard className="h-4 w-4" />
+                    <span className="text-sm">Secure Payment</span>
+                  </div>
+
+
+                  <div className="flex items-center gap-2 text-white/90">
+                    <BadgeCheck className="h-4 w-4 text-blue-400" />
+                    <span className="text-sm">Licensed Lawyer</span>
+                  </div>
 
                 </div>
 

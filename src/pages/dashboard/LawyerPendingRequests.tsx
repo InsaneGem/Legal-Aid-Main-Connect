@@ -50,14 +50,64 @@ const LawyerPendingRequests = () => {
     }
     setLoading(false);
   };
+  // const handleConsultation = async (id: string, action: 'accept' | 'reject') => {
+  //   const newStatus = action === 'accept' ? 'active' : 'cancelled';
+  //   const { error } = await supabase.from('consultations').update({ status: newStatus, started_at: action === 'accept' ? new Date().toISOString() : null }).eq('id', id);
+  //   if (!error) {
+  //     toast({ title: action === 'accept' ? '✅ Accepted!' : '❌ Declined' });
+  //     if (action === 'accept') navigate(`/consultation/${id}`);
+  //     else fetchData();
+  //   }
+  // };
   const handleConsultation = async (id: string, action: 'accept' | 'reject') => {
-    const newStatus = action === 'accept' ? 'active' : 'cancelled';
-    const { error } = await supabase.from('consultations').update({ status: newStatus, started_at: action === 'accept' ? new Date().toISOString() : null }).eq('id', id);
-    if (!error) {
-      toast({ title: action === 'accept' ? '✅ Accepted!' : '❌ Declined' });
-      if (action === 'accept') navigate(`/consultation/${id}`);
-      else fetchData();
+
+    if (!user) return;
+
+    if (action === 'accept') {
+
+      const now = new Date().toISOString();
+
+      // ✅ SAME AS BOOKING NOTIFICATION
+      await supabase.from('call_signals').insert({
+        consultation_id: id,
+        sender_id: user.id,
+        type: 'lawyer-accepted',
+        data: {}
+      });
+
+      await supabase
+        .from('consultations')
+        .update({
+          status: 'pending',        // ✅ keep same
+          started_at: null,
+          accepted_at: now          // ✅ IMPORTANT
+        })
+        .eq('id', id);
+
+      toast({
+        title: 'Accepted',
+        description: 'Waiting for client payment...'
+      });
+
+      navigate(`/consultation/${id}`);
+
+    } else {
+
+      // ❌ REJECT
+      await supabase
+        .from('consultations')
+        .update({ status: 'cancelled' })
+        .eq('id', id);
+
+      toast({
+        title: 'Declined',
+        description: 'Client has been notified'
+      });
+
+      fetchData(); // refresh list
+
     }
+
   };
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -76,20 +126,20 @@ const LawyerPendingRequests = () => {
   if (authLoading || loading) {
     return (
       // <MainLayout showFooter={false}>
-        <LawyerLayout>
+      <LawyerLayout>
         <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background">
           <div className="container mx-auto px-4 py-8">
             <Skeleton className="h-10 w-48 mb-6" />
             <Skeleton className="h-64 rounded-2xl" />
           </div>
         </div>
-      {/* </MainLayout> */}
+        {/* </MainLayout> */}
       </LawyerLayout>
     );
   }
   return (
     // <MainLayout showFooter={false}>
-      <LawyerLayout>
+    <LawyerLayout>
       <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background">
         <div className="container mx-auto px-4 py-8">
           <Button variant="ghost" className="gap-2 mb-6" onClick={() => navigate('/lawyer/dashboard')}>
@@ -114,36 +164,104 @@ const LawyerPendingRequests = () => {
               ) : (
                 <div className="space-y-4">
                   {consultations.map((c) => (
-                    <div key={c.id} className="p-5 bg-card rounded-xl border border-border">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-center gap-4 flex-1">
-                          <div className="w-14 h-14 rounded-full bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center overflow-hidden">
-                            {c.client_avatar ? <img src={c.client_avatar} alt={c.client_name} className="w-full h-full object-cover" /> : <User className="h-7 w-7 text-amber-600" />}
+                    // <div key={c.id} className="p-5 bg-card rounded-xl border border-border">
+                    //   <div className="flex items-start justify-between gap-4">
+                    //     <div className="flex items-center gap-4 flex-1">
+                    //       <div className="w-14 h-14 rounded-full bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center overflow-hidden">
+                    //         {c.client_avatar ? <img src={c.client_avatar} alt={c.client_name} className="w-full h-full object-cover" /> : <User className="h-7 w-7 text-amber-600" />}
+                    //       </div>
+                    //       <div className="flex-1 min-w-0">
+                    //         <p className="font-semibold text-lg">{c.client_name}</p>
+                    //         <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                    //           <Mail className="h-3.5 w-3.5" />
+                    //           <span className="truncate">{c.client_email}</span>
+                    //         </div>
+                    //         <div className="flex items-center gap-3 mt-2">
+                    //           <Badge className={getTypeColor(c.type)}>
+                    //             {getTypeIcon(c.type)}
+                    //             <span className="ml-1.5 capitalize">{c.type}</span>
+                    //           </Badge>
+                    //           <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    //             <Calendar className="h-3 w-3" />
+                    //             {new Date(c.created_at).toLocaleString()}
+                    //           </span>
+                    //         </div>
+                    //       </div>
+                    //     </div>
+                    //     <div className="flex gap-2">
+                    //       <Button size="sm" variant="outline" className="gap-1.5 hover:bg-red-500/10 hover:text-red-600 hover:border-red-500/30" onClick={() => handleConsultation(c.id, 'reject')}>
+                    //         <XCircle className="h-4 w-4" /> Decline
+                    //       </Button>
+                    //       <Button size="sm" className="gap-1.5" onClick={() => handleConsultation(c.id, 'accept')}>
+                    //         <CheckCircle className="h-4 w-4" /> Accept
+                    //       </Button>
+                    //     </div>
+                    //   </div>
+                    // </div>
+                    <div
+                      key={c.id}
+                      className="p-4 sm:p-5 bg-card rounded-xl border border-border"
+                    >
+                      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                        {/* Left Section */}
+                        <div className="flex flex-col sm:flex-row sm:items-start gap-4 flex-1 min-w-0">
+                          <div className="w-14 h-14 rounded-full bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center overflow-hidden flex-shrink-0 mx-auto sm:mx-0">
+                            {c.client_avatar ? (
+                              <img
+                                src={c.client_avatar}
+                                alt={c.client_name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <User className="h-7 w-7 text-amber-600" />
+                            )}
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-lg">{c.client_name}</p>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                              <Mail className="h-3.5 w-3.5" />
+
+                          <div className="flex-1 min-w-0 text-center sm:text-left">
+                            <p className="font-semibold text-base sm:text-lg break-words">
+                              {c.client_name}
+                            </p>
+
+                            <div className="flex items-center justify-center sm:justify-start gap-2 text-sm text-muted-foreground mt-1 min-w-0">
+                              <Mail className="h-3.5 w-3.5 flex-shrink-0" />
                               <span className="truncate">{c.client_email}</span>
                             </div>
-                            <div className="flex items-center gap-3 mt-2">
-                              <Badge className={getTypeColor(c.type)}>
-                                {getTypeIcon(c.type)}
-                                <span className="ml-1.5 capitalize">{c.type}</span>
-                              </Badge>
-                              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                <Calendar className="h-3 w-3" />
+
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mt-3">
+                              <div className="flex justify-center sm:justify-start">
+                                <Badge className={getTypeColor(c.type)}>
+                                  {getTypeIcon(c.type)}
+                                  <span className="ml-1.5 capitalize">{c.type}</span>
+                                </Badge>
+                              </div>
+
+                              <span className="text-xs text-muted-foreground flex items-center justify-center sm:justify-start gap-1 break-words">
+                                <Calendar className="h-3 w-3 flex-shrink-0" />
                                 {new Date(c.created_at).toLocaleString()}
                               </span>
                             </div>
                           </div>
                         </div>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" className="gap-1.5 hover:bg-red-500/10 hover:text-red-600 hover:border-red-500/30" onClick={() => handleConsultation(c.id, 'reject')}>
-                            <XCircle className="h-4 w-4" /> Decline
+
+                        {/* Right Section Buttons */}
+                        <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto lg:min-w-[220px]">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1.5 w-full sm:flex-1 hover:bg-red-500/10 hover:text-red-600 hover:border-red-500/30"
+                            onClick={() => handleConsultation(c.id, 'reject')}
+                          >
+                            <XCircle className="h-4 w-4" />
+                            Decline
                           </Button>
-                          <Button size="sm" className="gap-1.5" onClick={() => handleConsultation(c.id, 'accept')}>
-                            <CheckCircle className="h-4 w-4" /> Accept
+
+                          <Button
+                            size="sm"
+                            className="gap-1.5 w-full sm:flex-1"
+                            onClick={() => handleConsultation(c.id, 'accept')}
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                            Accept
                           </Button>
                         </div>
                       </div>
@@ -155,7 +273,7 @@ const LawyerPendingRequests = () => {
           </Card>
         </div>
       </div>
-    {/* </MainLayout> */}
+      {/* </MainLayout> */}
     </LawyerLayout>
   );
 };

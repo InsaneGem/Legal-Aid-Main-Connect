@@ -1,5 +1,5 @@
 const stats = [
-  { value: '10K+', label: 'Clients Served' },
+  { value: '10K+', label: 'Clients Servedd' },
   { value: '500+', label: 'Verified Lawyers' },
   { value: '50K+', label: 'Consultations' },
   { value: '4.9', label: 'Average Rating' },
@@ -11,8 +11,8 @@ export const StatsSection = () => {
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           {stats.map((stat, index) => (
-            <div 
-              key={stat.label} 
+            <div
+              key={stat.label}
               className="text-center animate-slide-up"
               style={{ animationDelay: `${index * 0.1}s` }}
             >

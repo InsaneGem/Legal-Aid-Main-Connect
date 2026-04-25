@@ -67,6 +67,7 @@ export const BookingNotificationProvider = ({ children }: BookingNotificationPro
 
       const { data: lawyerProfile } = await supabase
         .from('lawyer_profiles')
+        // .from('lawyer_profile')
         .select('user_id')
         .eq('user_id', user.id)
         .single();
@@ -84,6 +85,7 @@ export const BookingNotificationProvider = ({ children }: BookingNotificationPro
             filter: `lawyer_id=eq.${user.id}`,
           },
           async (payload) => {
+            console.log("🔥 Realtime triggered:", payload); // DEBUG
 
             const consultation = payload.new as any;
 
@@ -320,7 +322,8 @@ export const BookingNotificationProvider = ({ children }: BookingNotificationPro
 
       {requests.length > 0 && (
 
-        <div className="fixed inset-0 z-[120] flex items-center justify-center pointer-events-none">
+        // <div className="fixed inset-0 z-[120] flex items-center justify-center pointer-events-none">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center pointer-events-auto">
 
           {requests.map(req => {
 

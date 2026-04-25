@@ -19,7 +19,7 @@ export const ForLawyersCTA = () => {
               Grow Your Legal Practice with LEGALMATE
             </h2>
             <p className="text-primary-foreground/70 mb-8 leading-relaxed">
-              Join our network of verified lawyers and connect with clients seeking expert legal advice. 
+              Join our network of verified lawyers and connect with clients seeking expert legal advice.
               Set your own rates, manage your schedule, and build your reputation.
             </p>
             <Button

@@ -127,51 +127,6 @@ const LawyerConsultations = () => {
     setLoading(false);
   };
 
-  // const fetchData = async () => {
-  //   if (!user) return;
-
-  //   const { data } = await supabase
-  //     .from('consultations')
-  //     .select('*')
-  //     .eq('lawyer_id', user.id)
-  //     .order('created_at', { ascending: false });
-
-  //   if (data && data.length > 0) {
-  //     const clientIds = [...new Set(data.map(c => c.client_id))];
-  //     const consultationIds = data.map(c => c.id);
-
-  //     const [{ data: profiles }, { data: reviews }] = await Promise.all([
-  //       supabase
-  //         .from('profiles')
-  //         .select('id, full_name, avatar_url')
-  //         .in('id', clientIds),
-
-  //       supabase
-  //         .from('reviews')
-  //         .select('consultation_id, rating, review_text')
-  //         .in('consultation_id', consultationIds)
-  //     ]);
-
-  //     const enriched = data.map(c => {
-  //       const cp = profiles?.find(p => p.id === c.client_id);
-  //       const review = reviews?.find(r => r.consultation_id === c.id);
-
-  //       return {
-  //         ...c,
-  //         client_name: cp?.full_name || 'Client',
-  //         client_avatar: cp?.avatar_url || null,
-  //         client_rating: review?.rating ?? null,
-  //         client_review: review?.review_text ?? null,
-  //       };
-  //     });
-
-  //     setConsultations(enriched);
-  //   }
-
-  //   setLoading(false);
-  // };
-
-
   const openDetail = async (consultation: ConsultationWithClient) => {
     setSelectedConsultation(consultation);
     setDetailOpen(true);

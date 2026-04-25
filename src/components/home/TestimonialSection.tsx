@@ -40,7 +40,7 @@ const testimonials = [
 ];
 export const TestimonialSection = () => {
   return (
-    <section className="py-24">
+    <section className="py-12 md:py-20 -mt-10 md:-mt-10 bg-gradient-to-b from-background to-muted/30">
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
           <p className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-3">Testimonials</p>

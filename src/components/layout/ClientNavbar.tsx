@@ -37,17 +37,7 @@ export const ClientNavbar = () => {
       isActive(path) ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
     );
   return (
-
-    // remove this line after the after complete the project (below line)
-    <nav className="fixed top-[28px] left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
-
-
-
-      {/* uncomment the below line and make it permanent below line after complete the project */}
-      {/* // <nav className="fixed top-0 left-0 right-0 z-[100] bg-background/95 backdrop-blur-md border-b border-border"> */}
-
-
-
+    <nav className="fixed top-0 left-0 right-0 z-[100] bg-background/95 backdrop-blur-md border-b border-border">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}

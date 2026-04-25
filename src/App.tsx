@@ -62,9 +62,9 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <div className="fixed top-0 left-0 right-0 z-[100] bg-amber-500 text-amber-950 text-center text-xs sm:text-sm font-medium py-1.5 px-4">
-        ⚠️ This website is under process — you may experience some issues. This is basically a trial and error mode. Thank you for your patience!
-      </div>
+      {/* <div className="fixed top-0 left-0 right-0 z-[100] bg-amber-500 text-amber-950 text-center text-xs sm:text-sm font-medium py-1 px-1">
+        ⚠️ This website is under process!
+      </div> */}
       <BrowserRouter>
         <ScrollToTop />
         <AuthProvider>

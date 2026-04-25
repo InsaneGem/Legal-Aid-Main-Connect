@@ -1,4 +1,6 @@
+
 import { Search, CalendarCheck, Scale } from 'lucide-react';
+
 const steps = [
   {
     icon: Search,
@@ -10,43 +12,92 @@ const steps = [
     icon: CalendarCheck,
     step: '02',
     title: 'Book Consultation',
-    description: 'Choose your preferred mode — chat, audio, or video — and book an instant or scheduled session.',
+    description: 'Choose chat, audio, or video. Book instantly or schedule as per your convenience.',
   },
   {
     icon: Scale,
     step: '03',
     title: 'Get Legal Advice',
-    description: 'Receive expert legal guidance from the comfort of your home. Pay only for what you use.',
+    description: 'Receive expert guidance from anywhere. Pay only for what you use.',
   },
 ];
+
 export const HowItWorks = () => {
   return (
-    <section className="py-24">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-16">
-          <p className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-3">Simple Process</p>
-          <h2 className="font-serif text-3xl md:text-4xl font-bold mb-4">How It Works</h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            Getting legal help has never been easier. Three simple steps to connect with an expert.
+    <section className="py-12 md:py-20 -mt-5 md:-mt-5 bg-gradient-to-b from-background to-muted/30">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        {/* HEADER */}
+        <div className="text-center mb-12 md:mb-16">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">
+            Working Process
+          </p>
+          <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl font-bold mb-3">
+            How It Works
+          </h2>
+          <p className="text-muted-foreground max-w-xl mx-auto text-sm sm:text-base">
+            Get legal help in just three simple steps. Fast, secure, and hassle-free.
           </p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-          {/* Connector line (desktop) */}
-          <div className="hidden md:block absolute top-16 left-[20%] right-[20%] h-px bg-border" />
+
+        {/* STEPS */}
+        <div className="relative grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5 md:gap-8">
+
+          {/* CONNECTOR LINE (DESKTOP ONLY) */}
+          <div className="hidden md:block absolute top-20 left-[15%] right-[15%] h-[2px] bg-border/60" />
+
           {steps.map((item, index) => (
             <div
               key={item.title}
-              className="relative text-center p-8 animate-slide-up"
-              style={{ animationDelay: `${index * 0.15}s` }}
+              className="
+  group relative
+  rounded-xl sm:rounded-2xl
+  border border-black/10
+  bg-white/50 dark:bg-background/10
+  backdrop-blur-xl
+  p-4 sm:p-6 md:p-8
+  text-center
+  shadow-md
+  hover:shadow-2xl hover:-translate-y-1
+  transition-all duration-300
+"
             >
-              <div className="relative z-10 w-16 h-16 mx-auto rounded-full bg-primary flex items-center justify-center mb-6 shadow-elegant">
-                <item.icon className="h-7 w-7 text-primary-foreground" />
+              {/* STEP NUMBER BADGE */}
+              <div className="
+                absolute left-1/2 -translate-x-1/2
+                text-[8px] px-3 py-1
+                rounded-full
+                bg-primary text-primary-foreground
+                font-semibold tracking-wider
+                shadow
+              ">
+                STEP {item.step}
               </div>
-              <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2 block">Step {item.step}</span>
-              <h3 className="font-serif text-xl font-semibold mb-3">{item.title}</h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">{item.description}</p>
+
+              {/* ICON */}
+              <div className="
+               w-12 h-12 sm:w-14 sm:h-14 mb-3 sm:mb-5
+                rounded-xl
+                bg-primary/10
+                flex items-center justify-center
+                group-hover:bg-primary/20
+                transition-all duration-300
+              ">
+                <item.icon className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
+              </div>
+
+              {/* TITLE */}
+              <h3 className="font-serif -mt-5 md:-mt-5  text-base sm:text-lg md:text-xl font-semibold mb-2">
+                {item.title}
+              </h3>
+
+              {/* DESCRIPTION */}
+              <p className="text-muted-foreground text-[11px] -mt-2 md:-mt-2 sm:text-xs md:text-sm leading-relaxed">
+                {item.description}
+              </p>
             </div>
           ))}
+
         </div>
       </div>
     </section>

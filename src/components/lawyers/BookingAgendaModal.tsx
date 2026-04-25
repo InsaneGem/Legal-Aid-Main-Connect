@@ -308,21 +308,81 @@ export const BookingAgendaModal = ({
             setSubmitting(false);
         }
     };
+    // const handlePayment = async () => {
+    //     if (!pendingConsultationId) return;
+    //     setPayingNow(true);
+    //     await initiateRazorpayPayment({
+    //         consultationId: pendingConsultationId,
+    //         onSuccess: (id) => {
+    //             toast({
+    //                 title: '✅ Payment Successful!',
+    //                 description: 'Redirecting to consultation...',
+    //             });
+    //             setPayingNow(false);
+    //             resetAndClose();
+    //             onSuccess?.(id);
+    //             navigate(`/consultation/${id}`);
+    //         },
+    //         onError: (error) => {
+    //             toast({
+    //                 variant: 'destructive',
+    //                 title: 'Payment Failed',
+    //                 description: error,
+    //             });
+    //             setPayingNow(false);
+    //         },
+    //     });
+    // };
     const handlePayment = async () => {
         if (!pendingConsultationId) return;
+
         setPayingNow(true);
+
         await initiateRazorpayPayment({
             consultationId: pendingConsultationId,
-            onSuccess: (id) => {
-                toast({
-                    title: '✅ Payment Successful!',
-                    description: 'Redirecting to consultation...',
-                });
-                setPayingNow(false);
-                resetAndClose();
-                onSuccess?.(id);
-                navigate(`/consultation/${id}`);
+
+            onSuccess: async (id) => {
+                try {
+                    const now = new Date().toISOString();
+
+                    // ✅ STEP 1: update DB FIRST
+                    const { error } = await supabase
+                        .from('consultations')
+                        .update({
+                            status: 'active',
+                            started_at: now,
+                            payment_status: 'paid'
+                        })
+                        .eq('id', id);
+
+                    if (error) throw error;
+
+                    toast({
+                        title: '✅ Payment Successful!',
+                        description: 'Starting consultation...',
+                    });
+
+                    // small delay avoids route crash
+                    setTimeout(() => {
+                        setPayingNow(false);
+                        resetAndClose();
+                        onSuccess?.(id);
+                        navigate(`/consultation/${id}`);
+                    }, 300);
+
+                } catch (err) {
+                    console.error('Activation error:', err);
+
+                    toast({
+                        variant: 'destructive',
+                        title: 'Error',
+                        description: 'Payment succeeded but activation failed. Please refresh.',
+                    });
+
+                    setPayingNow(false);
+                }
             },
+
             onError: (error) => {
                 toast({
                     variant: 'destructive',
