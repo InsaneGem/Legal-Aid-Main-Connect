@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,6 +9,8 @@ interface UseWebRTCProps {
   isVideo: boolean;
   onRemoteStream?: (stream: MediaStream | null) => void;
   onConnectionStateChange?: (state: RTCPeerConnectionState) => void;
+  onIncomingCall?: () => void;
+  onCallEnded?: () => void;
 }
 
 interface SignalData {
@@ -20,6 +23,11 @@ const ICE_SERVERS: RTCConfiguration = {
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:stun2.l.google.com:19302' },
+    {
+      urls: 'turn:openrelay.metered.ca:80',
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
+    },
   ],
 };
 
@@ -29,25 +37,55 @@ export const useWebRTC = ({
   isVideo,
   onRemoteStream,
   onConnectionStateChange,
+  onIncomingCall,
+  onCallEnded,
 }: UseWebRTCProps) => {
   const { user } = useAuth();
+  const isCallerRef = useRef(false);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [connectionState, setConnectionState] = useState<RTCPeerConnectionState>('new');
   const [isConnecting, setIsConnecting] = useState(false);
+  const [hasIncomingCall, setHasIncomingCall] = useState(false);
 
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
   const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
   const hasInitiatedRef = useRef(false);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
-  // Start local media stream
+  const sendSignal = useCallback(
+    async (type: string, data: SignalData) => {
+      if (!user) return;
+      const { error } = await supabase.from('call_signals').insert({
+        consultation_id: consultationId,
+        sender_id: user.id,
+        type,
+        data,
+      } as any);
+      if (error) console.error('sendSignal error:', error);
+    },
+    [consultationId, user]
+  );
+
   const startLocalStream = useCallback(async () => {
     try {
+      if (localStreamRef.current) return localStreamRef.current;
+      // const stream = await navigator.mediaDevices.getUserMedia({
+      //   video: isVideo,
+      //   audio: true,
+      // });
       const stream = await navigator.mediaDevices.getUserMedia({
         video: isVideo,
         audio: true,
       });
+
+      // Start with mic muted by default
+      stream.getAudioTracks().forEach((track) => {
+        track.enabled = false;
+      });
+
+      localStreamRef.current = stream;
       setLocalStream(stream);
       return stream;
     } catch (error) {
@@ -56,204 +94,157 @@ export const useWebRTC = ({
     }
   }, [isVideo]);
 
-  // Stop all streams
   const stopStreams = useCallback(() => {
-    if (localStream) {
-      localStream.getTracks().forEach(track => track.stop());
-      setLocalStream(null);
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach((t) => t.stop());
+      localStreamRef.current = null;
     }
+    setLocalStream(null);
     setRemoteStream(null);
     onRemoteStream?.(null);
-  }, [localStream, onRemoteStream]);
+  }, [onRemoteStream]);
 
-  // Create peer connection
-  const createPeerConnection = useCallback((stream: MediaStream) => {
-    const pc = new RTCPeerConnection(ICE_SERVERS);
+  const createPeerConnection = useCallback(
+    (stream: MediaStream) => {
+      if (peerConnectionRef.current) return peerConnectionRef.current;
 
-    // Add local tracks to peer connection
-    stream.getTracks().forEach(track => {
-      pc.addTrack(track, stream);
-    });
+      const pc = new RTCPeerConnection(ICE_SERVERS);
 
-    // Handle remote stream
-    pc.ontrack = (event) => {
-      const [remoteMediaStream] = event.streams;
-      setRemoteStream(remoteMediaStream);
-      onRemoteStream?.(remoteMediaStream);
-    };
+      stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
-    // Handle ICE candidates
-    pc.onicecandidate = async (event) => {
-      if (event.candidate && user) {
-        await supabase.from('call_signals').insert({
-          consultation_id: consultationId,
-          sender_id: user.id,
-          type: 'ice-candidate',
-          data: { candidate: event.candidate.toJSON() },
-        } as any);
+      pc.ontrack = (event) => {
+        const [remoteMediaStream] = event.streams;
+        setRemoteStream(remoteMediaStream);
+        onRemoteStream?.(remoteMediaStream);
+      };
+
+      pc.onicecandidate = async (event) => {
+        if (event.candidate && user) {
+          await sendSignal('ice-candidate', {
+            candidate: event.candidate.toJSON(),
+          });
+        }
+      };
+
+      pc.onconnectionstatechange = () => {
+        setConnectionState(pc.connectionState);
+        onConnectionStateChange?.(pc.connectionState);
+      };
+
+      peerConnectionRef.current = pc;
+      return pc;
+    },
+    [user, sendSignal, onRemoteStream, onConnectionStateChange]
+  );
+
+  const createOffer = useCallback(
+    async (pc: RTCPeerConnection) => {
+      try {
+        if (pc.signalingState !== 'stable') return;
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        await sendSignal('offer', { sdp: offer });
+      } catch (error) {
+        console.error('Error creating offer:', error);
       }
-    };
+    },
+    [sendSignal]
+  );
 
-    // Handle connection state changes
-    pc.onconnectionstatechange = () => {
-      setConnectionState(pc.connectionState);
-      onConnectionStateChange?.(pc.connectionState);
-    };
-
-    peerConnectionRef.current = pc;
-    return pc;
-  }, [consultationId, user, onRemoteStream, onConnectionStateChange]);
-
-  // Send signaling data
-  const sendSignal = useCallback(async (type: string, data: SignalData) => {
-    if (!user) return;
-
-    await supabase.from('call_signals').insert({
-      consultation_id: consultationId,
-      sender_id: user.id,
-      type,
-      data,
-    } as any);
-  }, [consultationId, user]);
-
-  // Create and send offer
-  const createOffer = useCallback(async (pc: RTCPeerConnection) => {
-    try {
-      // Prevent duplicate offer creation
-      if (pc.signalingState !== "stable") return;
-
-      const offer = await pc.createOffer();
-
-      await pc.setLocalDescription(offer);
-
-      await sendSignal('offer', {
-        sdp: offer
-      });
-
-    } catch (error) {
-      console.error('Error creating offer:', error);
-    }
-  }, [sendSignal]);
-
-  // Handle received offer
- const handleOffer = useCallback(async (sdp: RTCSessionDescriptionInit) => {
-  if (!peerConnectionRef.current) return;
-
-  try {
-    if (
-      peerConnectionRef.current.signalingState !== "stable"
-    ) return;
-
-    await peerConnectionRef.current.setRemoteDescription(
-      new RTCSessionDescription(sdp)
-    );
-
+  const drainPendingCandidates = useCallback(async () => {
+    if (!peerConnectionRef.current) return;
     for (const candidate of pendingCandidatesRef.current) {
-      await peerConnectionRef.current.addIceCandidate(
-        new RTCIceCandidate(candidate)
-      );
+      try {
+        await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (e) {
+        console.error('Error adding queued ICE candidate:', e);
+      }
     }
-
     pendingCandidatesRef.current = [];
+  }, []);
 
-    const answer = await peerConnectionRef.current.createAnswer();
+  const handleOffer = useCallback(
+    async (sdp: RTCSessionDescriptionInit) => {
+      try {
+        let stream = localStreamRef.current;
+        if (!stream) stream = await startLocalStream();
+        if (!stream) return;
+        const pc = createPeerConnection(stream);
 
-    await peerConnectionRef.current.setLocalDescription(answer);
+        await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+        await drainPendingCandidates();
 
-    await sendSignal('answer', {
-      sdp: answer
-    });
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        await sendSignal('answer', { sdp: answer });
+      } catch (error) {
+        console.error('Error handling offer:', error);
+      }
+    },
+    [startLocalStream, createPeerConnection, sendSignal, drainPendingCandidates]
+  );
 
-  } catch (error) {
-    console.error('Error handling offer:', error);
-  }
-}, [sendSignal]);
+  const handleAnswer = useCallback(
+    async (sdp: RTCSessionDescriptionInit) => {
+      if (!peerConnectionRef.current) return;
+      try {
+        if (peerConnectionRef.current.signalingState === 'have-local-offer') {
+          await peerConnectionRef.current.setRemoteDescription(
+            new RTCSessionDescription(sdp)
+          );
+        }
+        await drainPendingCandidates();
+      } catch (error) {
+        console.error('Error handling answer:', error);
+      }
+    },
+    [drainPendingCandidates]
+  );
 
-  // Handle received answer
-  const handleAnswer = useCallback(async (sdp: RTCSessionDescriptionInit) => {
-  if (!peerConnectionRef.current) return;
-
-  try {
-    if (
-      peerConnectionRef.current.signalingState === "have-local-offer"
-    ) {
-      await peerConnectionRef.current.setRemoteDescription(
-        new RTCSessionDescription(sdp)
-      );
-    }
-
-    for (const candidate of pendingCandidatesRef.current) {
-      await peerConnectionRef.current.addIceCandidate(
-        new RTCIceCandidate(candidate)
-      );
-    }
-
-    pendingCandidatesRef.current = [];
-
-  } catch (error) {
-    console.error('Error handling answer:', error);
-  }
-}, []);
-
-  // Handle received ICE candidate
   const handleIceCandidate = useCallback(async (candidate: RTCIceCandidateInit) => {
-    if (!peerConnectionRef.current) {
+    if (!peerConnectionRef.current || !peerConnectionRef.current.remoteDescription) {
       pendingCandidatesRef.current.push(candidate);
       return;
     }
-
-    if (peerConnectionRef.current.remoteDescription) {
-      try {
-        await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidate));
-      } catch (error) {
-        console.error('Error adding ICE candidate:', error);
-      }
-    } else {
-      pendingCandidatesRef.current.push(candidate);
+    try {
+      await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+    } catch (error) {
+      console.error('Error adding ICE candidate:', error);
     }
   }, []);
 
-  // Initialize the call
   const initiateCall = useCallback(async () => {
-  if (!user || hasInitiatedRef.current) return;
-
-  setIsConnecting(true);
-  hasInitiatedRef.current = true;
-
-  const stream = await startLocalStream();
-
-  if (!stream) {
-    setIsConnecting(false);
-    return;
-  }
-
-  const pc = createPeerConnection(stream);
-
-  // Signal call start
-  await sendSignal('call-start', {});
-
-  // IMPORTANT: Create only ONE offer
-  setTimeout(async () => {
-    if (pc.signalingState === "stable") {
-      await createOffer(pc);
-    }
-  }, 1000);
-
-  setIsConnecting(false);
-}, [
-  user,
-  startLocalStream,
-  createPeerConnection,
-  sendSignal,
-  createOffer
-]);
-
-  // Join an existing call
-  const joinCall = useCallback(async () => {
     if (!user || hasInitiatedRef.current) return;
 
     setIsConnecting(true);
     hasInitiatedRef.current = true;
+    isCallerRef.current = true;
+
+    // Clear old signals
+    await supabase.from('call_signals').delete().eq('consultation_id', consultationId);
+
+    const stream = await startLocalStream();
+    if (!stream) {
+      setIsConnecting(false);
+      hasInitiatedRef.current = false;
+      return;
+    }
+
+    createPeerConnection(stream);
+
+    // Send call-start signal so the other user knows to join
+    await sendSignal('call-start', {});
+
+    setIsConnecting(false);
+  }, [user, startLocalStream, createPeerConnection, sendSignal, consultationId]);
+
+  const joinCall = useCallback(async () => {
+    if (!user) return;
+
+    setIsConnecting(true);
+    hasInitiatedRef.current = true;
+    isCallerRef.current = false;
+    setHasIncomingCall(false);
 
     const stream = await startLocalStream();
     if (!stream) {
@@ -262,13 +253,36 @@ export const useWebRTC = ({
     }
 
     createPeerConnection(stream);
-    setIsConnecting(false);
-  }, [user, startLocalStream, createPeerConnection]);
+    await sendSignal('call-accepted', {});
 
-  // End the call
+    setIsConnecting(false);
+  }, [user, startLocalStream, createPeerConnection, sendSignal]);
+
+  const rejectCall = useCallback(async () => {
+    setHasIncomingCall(false);
+    await sendSignal('call-rejected', {});
+  }, [sendSignal]);
+
+  // const endCall = useCallback(async () => {
+  //   if (user) await sendSignal('call-end', {});
+  //   if (peerConnectionRef.current) {
+  //     peerConnectionRef.current.close();
+  //     peerConnectionRef.current = null;
+  //   }
+  //   stopStreams();
+  //   pendingCandidatesRef.current = [];
+  //   hasInitiatedRef.current = false;
+  //   isCallerRef.current = false;
+  //   setConnectionState('new');
+  //   setHasIncomingCall(false);
+  // }, [user, sendSignal, stopStreams]);
   const endCall = useCallback(async () => {
-    if (user) {
-      await sendSignal('call-end', {});
+    try {
+      if (user) {
+        await sendSignal('call-end', {});
+      }
+    } catch (error) {
+      console.error('Error sending call-end:', error);
     }
 
     if (peerConnectionRef.current) {
@@ -277,40 +291,35 @@ export const useWebRTC = ({
     }
 
     stopStreams();
+    pendingCandidatesRef.current = [];
     hasInitiatedRef.current = false;
+    isCallerRef.current = false;
     setConnectionState('new');
-  }, [user, sendSignal, stopStreams]);
+    setHasIncomingCall(false);
 
-  // Toggle audio
+    onCallEnded?.();
+  }, [user, sendSignal, stopStreams, onCallEnded]);
+
   const toggleAudio = useCallback(() => {
-    if (localStream) {
-      localStream.getAudioTracks().forEach(track => {
-        track.enabled = !track.enabled;
-      });
-      return !localStream.getAudioTracks()[0]?.enabled;
+    if (localStreamRef.current) {
+      localStreamRef.current.getAudioTracks().forEach((t) => (t.enabled = !t.enabled));
+      return !localStreamRef.current.getAudioTracks()[0]?.enabled;
     }
     return false;
-  }, [localStream]);
+  }, []);
 
-  // Toggle video
   const toggleVideo = useCallback(() => {
-    if (localStream) {
-      localStream.getVideoTracks().forEach(track => {
-        track.enabled = !track.enabled;
-      });
-      return !localStream.getVideoTracks()[0]?.enabled;
+    if (localStreamRef.current) {
+      localStreamRef.current.getVideoTracks().forEach((t) => (t.enabled = !t.enabled));
+      return !localStreamRef.current.getVideoTracks()[0]?.enabled;
     }
     return false;
-  }, [localStream]);
+  }, []);
 
   // Subscribe to signaling channel
   useEffect(() => {
     if (!isActive || !user) return;
 
-    // Check for existing call-start signals first
- 
-
-    // Subscribe to new signals
     const channel = supabase
       .channel(`call-signals:${consultationId}`)
       .on(
@@ -329,55 +338,92 @@ export const useWebRTC = ({
           };
 
           // Ignore our own signals
-         if (signal.sender_id === user.id) return;
+          if (signal.sender_id === user.id) return;
 
-switch (signal.type) {
-case 'call-start':
-  if (
-    !hasInitiatedRef.current &&
-    !peerConnectionRef.current
-  ) {
-    await joinCall();
-  }
-  break;
+          console.log('📡 Received signal:', signal.type);
 
-  case 'offer':
-    if (signal.data.sdp) {
-      await handleOffer(signal.data.sdp);
-    }
-    break;
+          try {
+            switch (signal.type) {
+              case 'call-start':
+                // When other user initiates a call, auto-join immediately so we're ready
+                if (!isCallerRef.current && !hasInitiatedRef.current) {
+                  console.log('📞 Incoming call detected → auto-joining');
+                  hasInitiatedRef.current = true;
+                  isCallerRef.current = false;
+                  const stream = await startLocalStream();
+                  if (stream) {
+                    createPeerConnection(stream);
+                  }
+                }
+                break;
 
-  case 'answer':
-    if (signal.data.sdp) {
-      await handleAnswer(signal.data.sdp);
-    }
-    break;
+              case 'call-accepted':
+                if (isCallerRef.current && peerConnectionRef.current) {
+                  console.log('✅ Call accepted → sending offer');
+                  await createOffer(peerConnectionRef.current);
+                }
+                break;
 
-  case 'ice-candidate':
-    if (signal.data.candidate) {
-      await handleIceCandidate(signal.data.candidate);
-    }
-    break;
+              case 'call-rejected':
+                if (isCallerRef.current) {
+                  if (peerConnectionRef.current) {
+                    peerConnectionRef.current.close();
+                    peerConnectionRef.current = null;
+                  }
+                  stopStreams();
+                  pendingCandidatesRef.current = [];
+                  hasInitiatedRef.current = false;
+                  isCallerRef.current = false;
+                  setConnectionState('new');
+                  onCallEnded?.();
+                }
+                break;
 
-  case 'call-accepted':
-    console.log('Call accepted by remote user');
-    break;
+              case 'offer':
+                if (!isCallerRef.current && signal.data.sdp) {
+                  await handleOffer(signal.data.sdp);
+                }
+                break;
 
-  case 'call-end':
-    if (peerConnectionRef.current) {
-      peerConnectionRef.current.close();
-      peerConnectionRef.current = null;
-    }
+              case 'answer':
+                if (isCallerRef.current && signal.data.sdp) {
+                  await handleAnswer(signal.data.sdp);
+                }
+                break;
 
-    stopStreams();
-    hasInitiatedRef.current = false;
-    setConnectionState('new');
-    pendingCandidatesRef.current = [];
-    break;
-}
+              case 'ice-candidate':
+                if (signal.data.candidate) {
+                  await handleIceCandidate(signal.data.candidate);
+                }
+                break;
+
+              case 'call-end':
+                if (peerConnectionRef.current) {
+                  peerConnectionRef.current.close();
+                  peerConnectionRef.current = null;
+                }
+                stopStreams();
+                pendingCandidatesRef.current = [];
+                hasInitiatedRef.current = false;
+                isCallerRef.current = false;
+                setConnectionState('new');
+                setHasIncomingCall(false);
+                onCallEnded?.();
+                break;
+            }
+          } catch (error) {
+            console.error('Error handling signal:', error);
+          }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('📡 CHANNEL STATUS:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Channel subscribed successfully');
+        } else if (status === 'CLOSED') {
+          console.warn('⚠️ Channel closed - attempting to resubscribe...');
+        }
+      });
 
     channelRef.current = channel;
 
@@ -387,29 +433,37 @@ case 'call-start':
         channelRef.current = null;
       }
     };
-  }, [isActive, user, consultationId, initiateCall, joinCall, handleOffer, handleAnswer, handleIceCandidate, endCall]);
+  }, [isActive, user, consultationId]);
 
-  // Cleanup on unmount
   useEffect(() => {
-  return () => {
-    if (peerConnectionRef.current) {
-      peerConnectionRef.current.close();
-    }
-
-    hasInitiatedRef.current = false;
-    stopStreams();
-  };
-}, [stopStreams]);
+    return () => {
+      if (peerConnectionRef.current) {
+        peerConnectionRef.current.close();
+        peerConnectionRef.current = null;
+      }
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach((t) => t.stop());
+        localStreamRef.current = null;
+      }
+      hasInitiatedRef.current = false;
+      isCallerRef.current = false;
+    };
+  }, []);
 
   return {
-  localStream,
-  remoteStream,
-  connectionState,
-  isConnecting,
-  initiateCall,
-  joinCall,
-  toggleAudio,
-  toggleVideo,
-  endCall,
+    localStream,
+    remoteStream,
+    connectionState,
+    isConnecting,
+    hasIncomingCall,
+    initiateCall,
+    joinCall,
+    rejectCall,
+    toggleAudio,
+    toggleVideo,
+    endCall,
+    sendSignal,
   };
 };
+
+

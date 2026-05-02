@@ -1,3 +1,4 @@
+
 // import { useState, useEffect, useCallback } from 'react';
 // import { supabase } from '@/integrations/supabase/client';
 // import { useAuth } from '@/contexts/AuthContext';
@@ -12,26 +13,30 @@
 // }
 
 // export const useIncomingCalls = () => {
-//   // const { user } = useAuth();
-//   const { user, role } = useAuth();
+//   const { user } = useAuth();
 //   const navigate = useNavigate();
 //   const { toast } = useToast();
+
 //   const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
 
-//   // Fetch caller name from profiles
-//   const fetchCallerName = useCallback(async (callerId: string): Promise<string> => {
-//     const { data } = await supabase
-//       .from('profiles')
-//       .select('full_name')
-//       .eq('id', callerId)
-//       .single();
-//     return data?.full_name || 'Unknown Caller';
-//   }, []);
+//   // Fetch caller name
+//   const fetchCallerName = useCallback(
+//     async (callerId: string): Promise<string> => {
+//       const { data } = await supabase
+//         .from('profiles')
+//         .select('full_name')
+//         .eq('id', callerId)
+//         .single();
 
-//   // Accept the incoming call
-// const acceptCall = useCallback(async () => {
-//   if (incomingCall && user) {
-//     // send accepted signal
+//       return data?.full_name || 'Unknown Caller';
+//     },
+//     []
+//   );
+
+//   // Accept incoming call
+//   const acceptCall = useCallback(async () => {
+//     if (!incomingCall || !user) return;
+
 //     await supabase.from('call_signals').insert({
 //       consultation_id: incomingCall.consultationId,
 //       sender_id: user.id,
@@ -39,62 +44,69 @@
 //       data: {
 //         accepted_by: user.id,
 //       },
-//     });
+//     } as any);
 
 //     try {
 //       sessionStorage.setItem(
 //         `auto-open-call:${incomingCall.consultationId}`,
 //         incomingCall.callType
 //       );
-//     } catch {}
+//     } catch { }
 
-//     // ONLY correct route in your app
+//     // Correct route
 //     navigate(`/consultation/${incomingCall.consultationId}`);
 
 //     setIncomingCall(null);
-//   }
-// }, [incomingCall, user, navigate]);
+//   }, [incomingCall, user, navigate]);
 
-//   // Reject the incoming call
+//   // Reject incoming call
 //   const rejectCall = useCallback(async () => {
-//     if (incomingCall && user) {
-//       // Send call-rejected signal
-//       await supabase.from('call_signals').insert({
-//         consultation_id: incomingCall.consultationId,
-//         sender_id: user.id,
-//         type: 'call-rejected',
-//         data: { rejected_by: user.id },
-//       });
-//       setIncomingCall(null);
-//       toast({
-//         title: 'Call declined',
-//         description: 'You declined the incoming call.',
-//       });
-//     }
+//     if (!incomingCall || !user) return;
+
+//     await supabase.from('call_signals').insert({
+//       consultation_id: incomingCall.consultationId,
+//       sender_id: user.id,
+//       type: 'call-rejected',
+//       data: {
+//         rejected_by: user.id,
+//       },
+//     } as any);
+
+//     setIncomingCall(null);
+
+//     toast({
+//       title: 'Call declined',
+//       description: 'You declined the incoming call.',
+//     });
 //   }, [incomingCall, user, toast]);
 
-//   // Dismiss notification (same as reject but silent)
+//   // Dismiss popup silently
 //   const dismissCall = useCallback(() => {
 //     setIncomingCall(null);
 //   }, []);
 
-//   // Listen for keyboard events (Escape to dismiss)
+//   // ESC key dismiss
 //   useEffect(() => {
 //     const handleKeyDown = (e: KeyboardEvent) => {
 //       if (e.key === 'Escape' && incomingCall) {
 //         dismissCall();
 //       }
 //     };
+
 //     window.addEventListener('keydown', handleKeyDown);
-//     return () => window.removeEventListener('keydown', handleKeyDown);
+
+//     return () => {
+//       window.removeEventListener('keydown', handleKeyDown);
+//     };
 //   }, [incomingCall, dismissCall]);
 
-//   // Subscribe to call signals for this user
+//   // Main incoming call listener
 //   useEffect(() => {
 //     if (!user) return;
 
-//     // Get all consultations where this user is a participant
-//     const fetchUserConsultations = async () => {
+//     let channel: ReturnType<typeof supabase.channel> | null = null;
+
+//     const setupIncomingCalls = async () => {
 //       const { data: consultations } = await supabase
 //         .from('consultations')
 //         .select('id, client_id, lawyer_id, type')
@@ -103,10 +115,9 @@
 
 //       if (!consultations || consultations.length === 0) return;
 
-//       const consultationIds = consultations.map(c => c.id);
+//       const consultationIds = consultations.map((c) => c.id);
 
-//       // Subscribe to call signals for these consultations
-//       const channel = supabase
+//       channel = supabase
 //         .channel('incoming-calls-global')
 //         .on(
 //           'postgres_changes',
@@ -123,86 +134,94 @@
 //               data: any;
 //             };
 
-//             // Ignore our own signals
+//             // Ignore own signals
 //             if (signal.sender_id === user.id) return;
 
-//             // Only process if it's our consultation
+//             // Ignore unrelated consultations
 //             if (!consultationIds.includes(signal.consultation_id)) return;
 
-//             // Handle call-start signal
-//           if (signal.type === 'call-start') {
-//   // Prevent duplicate popup loop
-//   const consultation = consultations.find(
-//     c => c.id === signal.consultation_id
-//   );
+//             // Incoming call start
+//             if (signal.type === 'call-start') {
+//               const consultation = consultations.find(
+//                 (c) => c.id === signal.consultation_id
+//               );
 
-//   if (!consultation) return;
+//               if (!consultation) return;
 
-//   const callType =
-//     consultation.type === 'video'
-//       ? 'video'
-//       : 'audio';
+//               // Prevent duplicate popup loop
+//               setIncomingCall((prev) => {
+//                 if (
+//                   prev &&
+//                   prev.consultationId === signal.consultation_id
+//                 ) {
+//                   return prev;
+//                 }
 
-//   setIncomingCall((prev) => {
-//     if (
-//       prev &&
-//       prev.consultationId === signal.consultation_id
-//     ) {
-//       return prev;
-//     }
+//                 return {
+//                   consultationId: signal.consultation_id,
+//                   callType:
+//                     consultation.type === 'video'
+//                       ? 'video'
+//                       : 'audio',
+//                   callerName: 'Incoming Call',
+//                   callerId: signal.sender_id,
+//                 };
+//               });
 
-//     return {
-//       consultationId: signal.consultation_id,
-//       callType: callType as 'audio' | 'video',
-//       callerName: 'Incoming Call',
-//       callerId: signal.sender_id,
-//     };
-//   });
+//               const callerName = await fetchCallerName(signal.sender_id);
 
-//   const callerName = await fetchCallerName(signal.sender_id);
+//               setIncomingCall((prev) =>
+//                 prev?.consultationId === signal.consultation_id
+//                   ? {
+//                     ...prev,
+//                     callerName,
+//                   }
+//                   : prev
+//               );
 
-//   setIncomingCall((prev) =>
-//     prev?.consultationId === signal.consultation_id
-//       ? {
-//           ...prev,
-//           callerName,
-//         }
-//       : prev
-//   );
-
-//   // Show browser notification
-//   if (Notification.permission === 'granted') {
-//     new Notification(`Incoming ${callType} call`, {
-//       body: `${callerName} is calling you`,
-//       icon: '/favicon.ico',
-//       tag: 'incoming-call',
-//     });
-//   }
-// }
-// // if (signal.type === 'call-end' || signal.type === 'call-rejected') {
-
-//             // Handle call-end signal (clear incoming call if active)
-//             if (signal.type === 'call-end' || signal.type === 'call-rejected') {
-//               if (incomingCall?.consultationId === signal.consultation_id) {
-//                 setIncomingCall(null);
+//               if (Notification.permission === 'granted') {
+//                 new Notification(
+//                   `Incoming ${consultation.type === 'video'
+//                     ? 'video'
+//                     : 'audio'
+//                   } call`,
+//                   {
+//                     body: `${callerName} is calling you`,
+//                     icon: '/favicon.ico',
+//                     tag: 'incoming-call',
+//                   }
+//                 );
 //               }
+//             }
+
+//             // Accepted → close popup
+//             if (signal.type === 'call-accepted') {
+//               setIncomingCall(null);
+//             }
+
+//             // Ended / Rejected → close popup
+//             if (
+//               signal.type === 'call-end' ||
+//               signal.type === 'call-rejected'
+//             ) {
+//               setIncomingCall(null);
 //             }
 //           }
 //         )
 //         .subscribe();
-
-//       return () => {
-//         supabase.removeChannel(channel);
-//       };
 //     };
 
-//     fetchUserConsultations();
+//     setupIncomingCalls();
 
-//     // Request notification permission
 //     if (Notification.permission === 'default') {
 //       Notification.requestPermission();
 //     }
-//   // }, [user, fetchCallerName, incomingCall]);
+
+//     return () => {
+//       if (channel) {
+//         supabase.removeChannel(channel);
+//       }
+//     };
 //   }, [user, fetchCallerName]);
 
 //   return {
@@ -212,6 +231,11 @@
 //     dismissCall,
 //   };
 // };
+
+
+
+// ******************************
+
 
 
 import { useState, useEffect, useCallback } from 'react';
@@ -231,97 +255,68 @@ export const useIncomingCalls = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-
   const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
 
-  // Fetch caller name
-  const fetchCallerName = useCallback(
-    async (callerId: string): Promise<string> => {
-      const { data } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('id', callerId)
-        .single();
+  const fetchCallerName = useCallback(async (callerId: string): Promise<string> => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', callerId)
+      .single();
+    return data?.full_name || 'Unknown Caller';
+  }, []);
 
-      return data?.full_name || 'Unknown Caller';
-    },
-    []
-  );
-
-  // Accept incoming call
-  const acceptCall = useCallback(async () => {
-    if (!incomingCall || !user) return;
-
-    await supabase.from('call_signals').insert({
-      consultation_id: incomingCall.consultationId,
-      sender_id: user.id,
-      type: 'call-accepted',
-      data: {
-        accepted_by: user.id,
-      },
-    } as any);
-
+  // Accept: store flag so Consultation page auto-opens the call, then navigate.
+  // We do NOT send 'call-accepted' here — the AudioCall/VideoCall will send it
+  // after media stream + peer connection are ready (avoids racing the offer).
+  const acceptCall = useCallback(() => {
+    if (!incomingCall) return;
     try {
       sessionStorage.setItem(
         `auto-open-call:${incomingCall.consultationId}`,
         incomingCall.callType
       );
-    } catch {}
-
-    // Correct route
+    } catch { }
     navigate(`/consultation/${incomingCall.consultationId}`);
-
+    // Notify already-mounted Consultation page (same route → no remount)
+    window.dispatchEvent(
+      new CustomEvent('auto-open-call', {
+        detail: {
+          consultationId: incomingCall.consultationId,
+          callType: incomingCall.callType,
+        },
+      })
+    );
     setIncomingCall(null);
-  }, [incomingCall, user, navigate]);
+  }, [incomingCall, navigate]);
 
-  // Reject incoming call
   const rejectCall = useCallback(async () => {
     if (!incomingCall || !user) return;
-
     await supabase.from('call_signals').insert({
       consultation_id: incomingCall.consultationId,
       sender_id: user.id,
       type: 'call-rejected',
-      data: {
-        rejected_by: user.id,
-      },
+      data: { rejected_by: user.id },
     } as any);
-
     setIncomingCall(null);
-
-    toast({
-      title: 'Call declined',
-      description: 'You declined the incoming call.',
-    });
+    toast({ title: 'Call declined' });
   }, [incomingCall, user, toast]);
 
-  // Dismiss popup silently
-  const dismissCall = useCallback(() => {
-    setIncomingCall(null);
-  }, []);
+  const dismissCall = useCallback(() => setIncomingCall(null), []);
 
-  // ESC key dismiss
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && incomingCall) {
-        dismissCall();
-      }
+      if (e.key === 'Escape' && incomingCall) dismissCall();
     };
-
     window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [incomingCall, dismissCall]);
 
-  // Main incoming call listener
   useEffect(() => {
     if (!user) return;
-
     let channel: ReturnType<typeof supabase.channel> | null = null;
 
-    const setupIncomingCalls = async () => {
+    const setup = async () => {
       const { data: consultations } = await supabase
         .from('consultations')
         .select('id, client_id, lawyer_id, type')
@@ -329,121 +324,63 @@ export const useIncomingCalls = () => {
         .in('status', ['pending', 'active']);
 
       if (!consultations || consultations.length === 0) return;
-
       const consultationIds = consultations.map((c) => c.id);
 
       channel = supabase
         .channel('incoming-calls-global')
         .on(
           'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'call_signals',
-          },
+          { event: 'INSERT', schema: 'public', table: 'call_signals' },
           async (payload) => {
             const signal = payload.new as {
               consultation_id: string;
               sender_id: string;
               type: string;
-              data: any;
             };
-
-            // Ignore own signals
             if (signal.sender_id === user.id) return;
-
-            // Ignore unrelated consultations
             if (!consultationIds.includes(signal.consultation_id)) return;
 
-            // Incoming call start
             if (signal.type === 'call-start') {
-              const consultation = consultations.find(
-                (c) => c.id === signal.consultation_id
-              );
-
+              const consultation = consultations.find((c) => c.id === signal.consultation_id);
               if (!consultation) return;
-
-              // Prevent duplicate popup loop
-              setIncomingCall((prev) => {
-                if (
-                  prev &&
-                  prev.consultationId === signal.consultation_id
-                ) {
-                  return prev;
-                }
-
-                return {
-                  consultationId: signal.consultation_id,
-                  callType:
-                    consultation.type === 'video'
-                      ? 'video'
-                      : 'audio',
-                  callerName: 'Incoming Call',
-                  callerId: signal.sender_id,
-                };
-              });
-
+              const callType = consultation.type === 'video' ? 'video' : 'audio';
               const callerName = await fetchCallerName(signal.sender_id);
-
-              setIncomingCall((prev) =>
-                prev?.consultationId === signal.consultation_id
-                  ? {
-                      ...prev,
-                      callerName,
-                    }
-                  : prev
-              );
-
+              setIncomingCall({
+                consultationId: signal.consultation_id,
+                callType,
+                callerName,
+                callerId: signal.sender_id,
+              });
               if (Notification.permission === 'granted') {
-                new Notification(
-                  `Incoming ${
-                    consultation.type === 'video'
-                      ? 'video'
-                      : 'audio'
-                  } call`,
-                  {
-                    body: `${callerName} is calling you`,
-                    icon: '/favicon.ico',
-                    tag: 'incoming-call',
-                  }
-                );
+                new Notification(`Incoming ${callType} call`, {
+                  body: `${callerName} is calling you`,
+                  icon: '/favicon.ico',
+                  tag: 'incoming-call',
+                });
               }
             }
 
-            // Accepted → close popup
-            if (signal.type === 'call-accepted') {
-              setIncomingCall(null);
-            }
-
-            // Ended / Rejected → close popup
             if (
               signal.type === 'call-end' ||
-              signal.type === 'call-rejected'
+              signal.type === 'call-rejected' ||
+              signal.type === 'call-accepted'
             ) {
-              setIncomingCall(null);
+              setIncomingCall((prev) =>
+                prev?.consultationId === signal.consultation_id ? null : prev
+              );
             }
           }
         )
         .subscribe();
     };
 
-    setupIncomingCalls();
-
-    if (Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
+    setup();
+    if (Notification.permission === 'default') Notification.requestPermission();
 
     return () => {
-      if (channel) {
-        supabase.removeChannel(channel);
-      }
+      if (channel) supabase.removeChannel(channel);
     };
   }, [user, fetchCallerName]);
 
-  return {
-    incomingCall,
-    acceptCall,
-    rejectCall,
-    dismissCall,
-  };
+  return { incomingCall, acceptCall, rejectCall, dismissCall };
 };

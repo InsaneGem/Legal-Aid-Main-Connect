@@ -70,7 +70,7 @@ export const BookingNotificationProvider = ({ children }: BookingNotificationPro
         // .from('lawyer_profile')
         .select('user_id')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (!lawyerProfile) return;
 
@@ -259,32 +259,49 @@ export const BookingNotificationProvider = ({ children }: BookingNotificationPro
 
     const now = new Date().toISOString();
 
-    // 1. Send signal (keep it)
-    await supabase.from('call_signals').insert({
-      consultation_id: req.consultationId,
-      sender_id: user.id,
-      type: 'lawyer-accepted',
-      data: {}
-    });
+    try {
+      // 1. Send signal
+      await supabase.from('call_signals').insert({
+        consultation_id: req.consultationId,
+        sender_id: user.id,
+        type: 'lawyer-accepted',
+        data: {}
+      });
 
-    // 2. 🔥 UPDATE CONSULTATION (THIS IS THE REAL FIX)
-    await supabase
-      .from('consultations')
-      .update({
-        status: 'pending',
-        started_at: null,
-        accepted_at: now   // ✅ IMPORTANT
-      })
-      .eq('id', req.consultationId);
+      // 2. Update consultation with accepted_at
+      const { error: updateError } = await supabase
+        .from('consultations')
+        .update({
+          status: 'pending',
+          started_at: null,
+          accepted_at: now
+        })
+        .eq('id', req.consultationId);
 
-    toast({
-      title: 'Accepted',
-      description: 'Waiting for client payment...'
-    });
+      if (updateError) {
+        throw updateError;
+      }
 
-    dismissRequest(req.id);
+      toast({
+        title: 'Accepted',
+        description: 'Waiting for client payment...'
+      });
 
-    navigate(`/consultation/${req.consultationId}`);
+      dismissRequest(req.id);
+
+      // Store flag to auto-join call when navigating to consultation
+      sessionStorage.setItem(`lawyer-accepted:${req.consultationId}`, 'true');
+
+      // Navigate to consultation - it will fetch fresh data
+      navigate(`/consultation/${req.consultationId}`);
+    } catch (error) {
+      console.error('Error accepting consultation:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to accept consultation. Please try again.'
+      });
+    }
   };
 
   const handleReject = async (req: IncomingRequest) => {

@@ -756,7 +756,7 @@ const ClientDashboard = () => {
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
 
             {/* Active Consultations */}
-            {activeConsultations.length > 0 && (
+            {/* {activeConsultations.length > 0 && (
               <Card className="border border-blue-500/30 bg-blue-500/5 shadow-sm">
 
                 <CardHeader className="pb-2 pt-3 px-4">
@@ -769,7 +769,7 @@ const ClientDashboard = () => {
                   </CardTitle>
 
                   <CardDescription className="text-xs">
-                    Ongoing sessions
+                    Ongoing sessionss
                   </CardDescription>
                 </CardHeader>
 
@@ -813,7 +813,7 @@ const ClientDashboard = () => {
                                 </div>
                               </div>
                               <Button size="sm" className="h-7 text-xs px-2">
-                                Continue
+                                Continueee
                               </Button>
 
                             </div>
@@ -838,7 +838,7 @@ const ClientDashboard = () => {
 
                 </CardContent>
               </Card>
-            )}
+            )} */}
 
 
 

@@ -38,7 +38,7 @@ import Terms from "./pages/Terms";
 import Refund from "./pages/Refund";
 import ClientLawyerDetail from "./pages/ClientLawyerDetail";
 import ConsultationHistory from "./pages/dashboard/ClientConsultationhistory";
-import ClientConsultation from "./pages/consultation/ClientConsultation";
+// import ClientConsultation from "./pages/consultation/ClientConsultation";
 // import LawyerConsultation from "./pages/consultation/LawyerConsultation";
 import SavedLawyers from "./pages/SavedLawyers";
 import ClientActiveSessions from "./pages/dashboard/ClientActiveSessions";

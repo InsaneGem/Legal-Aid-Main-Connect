@@ -32,8 +32,8 @@ export const IncomingCallNotification = ({
         const audio = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU');
         audio.loop = true;
         audio.volume = 0.3;
-        audio.play().catch(() => {});
-        
+        audio.play().catch(() => { });
+
         return () => {
           audio.pause();
           audio.currentTime = 0;
@@ -94,7 +94,7 @@ export const IncomingCallNotification = ({
           >
             <PhoneOff className="h-7 w-7" />
           </Button>
-          
+
           <Button
             size="lg"
             className="rounded-full w-16 h-16 shadow-lg hover:scale-105 transition-transform bg-primary hover:bg-primary/90"

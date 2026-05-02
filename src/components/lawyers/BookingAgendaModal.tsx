@@ -99,14 +99,21 @@ export const BookingAgendaModal = ({
     const [countdown, setCountdown] = useState(60);
     const [pendingConsultationId, setPendingConsultationId] = useState<string | null>(null);
     const [payingNow, setPayingNow] = useState(false);
+    const [selectedMinutes, setSelectedMinutes] = useState(10);
 
     useEffect(() => {
         setConsultationType(initialType);
     }, [initialType]);
 
-    const minimumMinutes = 10;
+    // const minimumMinutes = 10;
+    const minimumMinutes = selectedMinutes;
     const pricePerMinute = lawyer.price_per_minute || 5;
     const sessionCost = minimumMinutes * pricePerMinute;
+    const CONSULTATION_PRICING = {
+        chat: [5, 10, 15, 20],
+        audio: [10, 15, 20, 30],
+        video: [15, 20, 30, 45],
+    };
 
     const getTypeIcon = (type: string) => {
         switch (type) {
@@ -278,6 +285,7 @@ export const BookingAgendaModal = ({
                     type: consultationType,
                     status: 'pending',
                     total_amount: sessionCost,
+                    duration_minutes: selectedMinutes,
                     agenda: fullAgenda,
                     payment_status: 'unpaid',
                 })
@@ -620,7 +628,7 @@ scroll-smooth scrollbar-none [-ms-overflow-style:none] [scrollbar-width:none] [&
 
                             {/* Consultation Type */}
 
-                            <div className="space-y-2">
+                            {/* <div className="space-y-2">
 
                                 <Label className="text-sm font-medium">
                                     Select The Consultation Mode
@@ -650,7 +658,71 @@ scroll-smooth scrollbar-none [-ms-overflow-style:none] [scrollbar-width:none] [&
 
                                 </div>
 
+                            </div> */}
+
+                            <div className="space-y-3">
+
+                                <Label className="text-sm font-medium">
+                                    Select The Consultation Mode
+                                </Label>
+
+                                <div className="grid grid-cols-3 gap-2">
+
+                                    {(['chat', 'audio', 'video'] as const).map((type) => (
+
+                                        <button
+                                            key={type}
+                                            onClick={() => {
+                                                setConsultationType(type);
+                                                setSelectedMinutes(CONSULTATION_PRICING[type][0]);
+                                            }}
+                                            className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all ${consultationType === type
+                                                ? 'border-primary bg-primary/5'
+                                                : 'border-border hover:border-primary/30'
+                                                }`}
+                                        >
+
+                                            {getTypeIcon(type)}
+
+                                            <span className="text-xs font-medium capitalize">
+                                                {getTypeLabel(type)}
+                                            </span>
+
+                                        </button>
+
+                                    ))}
+
+                                </div>
+
+                                <div className="p-3 rounded-xl border bg-secondary/30 space-y-3">
+
+                                    <Label className="text-xs font-medium text-muted-foreground">
+                                        Select Per Minute Charges
+                                    </Label>
+
+                                    <div className="grid grid-cols-2 gap-2">
+
+                                        {CONSULTATION_PRICING[consultationType].map((price) => (
+
+                                            <button
+                                                key={price}
+                                                onClick={() => setSelectedMinutes(price)}
+                                                className={`h-10 rounded-lg text-sm font-semibold border transition-all ${selectedMinutes === price
+                                                    ? 'bg-primary text-white border-primary'
+                                                    : 'hover:border-primary/40'
+                                                    }`}
+                                            >
+                                                ₹{price}/min
+                                            </button>
+
+                                        ))}
+
+                                    </div>
+
+                                </div>
+
                             </div>
+
 
 
 
@@ -698,7 +770,7 @@ scroll-smooth scrollbar-none [-ms-overflow-style:none] [scrollbar-width:none] [&
                             <div className="flex items-center justify-between p-3 bg-primary/5 rounded-xl border border-primary/20">
                                 <div className="flex items-center gap-2 text-sm">
                                     <CreditCard className="h-4 w-4 text-primary" />
-                                    <span>Session Fee</span>
+                                    <span>Session Fee ({selectedMinutes} mins)</span>
                                 </div>
                                 <span className="font-bold text-primary">₹{sessionCost.toFixed(2)}</span>
                             </div>

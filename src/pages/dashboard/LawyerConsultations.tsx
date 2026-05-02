@@ -255,9 +255,6 @@ const LawyerConsultations = () => {
                 <History className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
               </div>
               <h3 className="font-semibold mb-1">No consultations found</h3>
-              {/* <p className="text-sm text-muted-foreground">
-                {searchQuery || filterStatus !== 'all' ? 'Try adjusting your filters' : 'Book your first consultation'}
-              </p> */}
             </div>
           ) : (
             <>
@@ -271,7 +268,7 @@ const LawyerConsultations = () => {
                     <Card
                       key={c.id}
                       className="border shadow-sm hover:shadow-md hover:border-primary/20 transition-all duration-300 cursor-pointer group animate-fade-in overflow-hidden"
-                      // onClick={() => navigate(`/consultation/${c.id}`)}
+
                       style={{ animationDelay: `${index * 50}ms` }}
                       onClick={() => openDetail(c)}
                     >
