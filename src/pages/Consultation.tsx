@@ -1152,7 +1152,7 @@ const Consultation = () => {
           )}
 
           {/* Audio/Video buttons - CLIENT ONLY */}
-          {isActive && isClient && !isAudioCallActive && !isVideoCallActive && (
+          {/* {isActive && isClient && !isAudioCallActive && !isVideoCallActive && (
             <div className="flex items-center gap-1.5 sm:gap-2">
               <Button
                 variant="outline"
@@ -1177,6 +1177,44 @@ const Consultation = () => {
                 <span className="hidden sm:inline">Video</span>
               </Button>
             </div>
+          )} */}
+          {/* Audio/Video buttons - CLIENT ONLY */}
+          {isActive && isClient && !isAudioCallActive && !isVideoCallActive && (
+            <div className="flex items-center gap-1.5 sm:gap-2">
+
+              {consultation?.type === "audio" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 sm:h-9 text-xs sm:text-sm gap-1 px-2 sm:px-3"
+                  onClick={() => {
+                    setCallInitiatedByMe(true);
+                    setIsAudioCallActive(true);
+                  }}
+                  title="Start audio call with lawyer"
+                >
+                  <Phone className="h-4 w-4" />
+                  <span className="hidden sm:inline">Audio</span>
+                </Button>
+              )}
+
+              {consultation?.type === "video" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 sm:h-9 text-xs sm:text-sm gap-1 px-2 sm:px-3"
+                  onClick={() => {
+                    setCallInitiatedByMe(true);
+                    setIsVideoCallActive(true);
+                  }}
+                  title="Start video call with lawyer"
+                >
+                  <Video className="h-4 w-4" />
+                  <span className="hidden sm:inline">Video</span>
+                </Button>
+              )}
+
+            </div>
           )}
 
           {/* End button - CLIENT ONLY */}
@@ -1192,10 +1230,10 @@ const Consultation = () => {
             </Button>
           )}
         </div>
-      </header>
+      </header >
 
       {/* ═══ MAIN CONTENT ═══ */}
-      <div className="flex-1 flex overflow-hidden">
+      <div div className="flex-1 flex overflow-hidden" >
         {/* Desktop sidebar later add this content in nav bar */}
         {/* {isActive && (
           <div className="hidden lg:flex w-72 border-r border-border flex-col bg-card/30 flex-shrink-0 animate-fade-in">
@@ -1431,6 +1469,22 @@ const Consultation = () => {
 
                   {/* <div className="absolute inset-0 bg-black/10 dark:bg-black/50  pointer-events-none " /> */}
 
+                  {/* Session countdown */}
+                  {isActive && (
+                    <div className="w-full flex justify-center sticky top-3 z-20 mb-3">
+                      <div
+                        className={cn(
+                          "flex items-center gap-1.5 px-4 py-2 rounded-full font-mono text-xs font-semibold shadow-lg backdrop-blur-md",
+                          (sessionCountdown ?? 0) <= 60
+                            ? "bg-destructive/90 text-white animate-pulse"
+                            : "bg-primary text-primary-foreground"
+                        )}
+                      >
+                        <Timer className="h-4 w-4" />
+                        {sessionCountdown !== null && formatCountdown(sessionCountdown)}
+                      </div>
+                    </div>
+                  )}
 
 
                   {/* Premium badge */}
@@ -1439,6 +1493,7 @@ const Consultation = () => {
                       <Shield className="h-4 w-4" />
                       <span>Secure Legal Consultation</span>
                     </div>
+
                   </div>
 
                   {messages.length === 0 && isActive && (
@@ -1691,10 +1746,10 @@ const Consultation = () => {
             </div>
           )}
         </div>
-      </div>
+      </div >
 
       {/* ═══ RATING DIALOG ═══ */}
-      <Dialog
+      <Dialog Dialog
         open={showRating && isClient}
         onOpenChange={(open) => {
           if (!open) {
@@ -1767,10 +1822,10 @@ const Consultation = () => {
             </div>
           </div>
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       {/* ═══ MOOD DIALOG ═══ */}
-      <Dialog open={showMoodDialog} onOpenChange={() => { }}>
+      <Dialog Dialog open={showMoodDialog} onOpenChange={() => { }}>
         <DialogContent className="sm:max-w-[380px] p-0 gap-0 overflow-hidden rounded-2xl [&>button]:hidden">
           <div className="p-6 sm:p-8 text-center">
             <div className="w-14 h-14 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
@@ -1791,10 +1846,10 @@ const Consultation = () => {
             </Button>
           </div>
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       {/* ═══ VIDEO / AUDIO CALL OVERLAYS ═══ */}
-      <VideoCall
+      < VideoCall
         isActive={isVideoCallActive}
         onEnd={() => { setIsVideoCallActive(false); setCallInitiatedByMe(false); }}
         participantName={participant?.full_name || 'Participant'}
@@ -1803,7 +1858,7 @@ const Consultation = () => {
       />
 
       {/* Audio Call Component */}
-      <AudioCall
+      < AudioCall
         isActive={isAudioCallActive}
         onEnd={() => { setIsAudioCallActive(false); setCallInitiatedByMe(false); }}
         participantName={participant?.full_name || 'Participant'}

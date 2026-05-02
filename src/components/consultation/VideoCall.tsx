@@ -287,15 +287,16 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Video, VideoOff, Mic, MicOff, PhoneOff,
-  Maximize2, Minimize2, Users, Circle, Loader2,
+  Maximize2, Minimize2, Users, Circle, Loader2, Volume2, VolumeX
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useWebRTC } from '@/hooks/useWebRTC';
 import { useCallRecording } from '@/hooks/useCallRecording';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface VideoCallProps {
   isActive: boolean;
@@ -309,9 +310,11 @@ export const VideoCall = ({
   isActive, onEnd, participantName, consultationId, isInitiatedByMe = false,
 }: VideoCallProps) => {
   const { toast } = useToast();
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
   const [isVideoOn, setIsVideoOn] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isSpeakerOn, setIsSpeakerOn] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState('');
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -337,18 +340,59 @@ export const VideoCall = ({
       onEnd();
     },
   });
+  useEffect(() => {
+    const fetchAvatar = async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('avatar_url')
+        .eq('full_name', participantName)
+        .single();
 
-  const {
-    isRecording, recordingDuration, startRecording, stopRecording,
-    formatDuration, cleanup: cleanupRecording,
-  } = useCallRecording({ consultationId, localStream, remoteStream });
+      if (data?.avatar_url) {
+        setAvatarUrl(data.avatar_url);
+      }
+    };
+
+    if (participantName) fetchAvatar();
+  }, [participantName]);
+
 
   useEffect(() => {
     if (!isActive || hasStartedRef.current) return;
+
     hasStartedRef.current = true;
+
     if (isInitiatedByMe) initiateCall();
     else joinCall();
+
+    setIsMuted(true);
+    setIsSpeakerOn(false);
+
   }, [isActive, isInitiatedByMe, initiateCall, joinCall]);
+
+  // ==============================
+  // STEP 3: ADD mic mute after stream ready
+  // ==============================
+
+  useEffect(() => {
+    if (localStream) {
+      localStream.getAudioTracks().forEach((track) => {
+        track.enabled = false;
+      });
+      setIsMuted(true);
+    }
+  }, [localStream]);
+
+  // ==============================
+  // STEP 4: ADD speaker mute after remote ready
+  // ==============================
+
+  useEffect(() => {
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.muted = true;
+      setIsSpeakerOn(false);
+    }
+  }, [remoteStream]);
 
   useEffect(() => {
     if (!isActive) hasStartedRef.current = false;
@@ -364,6 +408,12 @@ export const VideoCall = ({
 
   const handleToggleMute = () => setIsMuted(toggleAudio());
   const handleToggleVideo = () => setIsVideoOn(!toggleVideo());
+  const handleToggleSpeaker = () => {
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.muted = isSpeakerOn;
+    }
+    setIsSpeakerOn(!isSpeakerOn);
+  };
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement && containerRef.current) {
@@ -376,13 +426,13 @@ export const VideoCall = ({
   };
 
   const handleEndCall = async () => {
-    if (isRecording) stopRecording();
-    cleanupRecording();
+    // if (isRecording) stopRecording();
+    // cleanupRecording();
     await endCall();
     onEnd();
   };
 
-  const handleToggleRecording = () => (isRecording ? stopRecording() : startRecording());
+  // const handleToggleRecording = () => (isRecording ? stopRecording() : startRecording());
 
   const getConnectionStatusText = () => {
     switch (connectionState) {
@@ -396,88 +446,253 @@ export const VideoCall = ({
 
   if (!isActive) return null;
 
+  // return (
+  //   <div ref={containerRef} className={cn('fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex flex-col', isFullscreen && 'bg-black')}>
+  //     <div className="flex items-center justify-between p-4 border-b border-border bg-background/80">
+  //       <div className="flex items-center gap-3">
+  //         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+  //           <Users className="h-5 w-5 text-primary" />
+  //         </div>
+  //         <div>
+  //           <h3 className="font-semibold">Video Call</h3>
+  //           <div className="flex items-center gap-2">
+  //             <p className="text-sm text-muted-foreground">with {participantName}</p>
+  //             <span className={cn('text-xs px-2 py-0.5 rounded-full',
+  //               connectionState === 'connected' ? 'bg-emerald-500/20 text-emerald-600' :
+  //                 connectionState === 'connecting' ? 'bg-amber-500/20 text-amber-600' :
+  //                   'bg-muted text-muted-foreground')}>
+  //               {getConnectionStatusText()}
+  //             </span>
+  //           </div>
+  //         </div>
+  //       </div>
+  //       <div className="flex items-center gap-2">
+  //         {/* {isRecording && (
+  //           <div className="flex items-center gap-2 px-3 py-1.5 bg-red-500/20 rounded-full">
+  //             <Circle className="h-3 w-3 fill-red-500 text-red-500 animate-pulse" />
+  //             <span className="text-sm font-medium text-red-600">REC {formatDuration(recordingDuration)}</span>
+  //           </div>
+  //         )} */}
+  //         <Button variant="ghost" size="icon" onClick={toggleFullscreen}>
+  //           {isFullscreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
+  //         </Button>
+  //       </div>
+  //     </div>
+
+  //     <div className="flex-1 p-4 flex gap-4 relative">
+  //       <Card className="flex-1 bg-muted/50 flex items-center justify-center relative overflow-hidden">
+  //         {remoteStream ? (
+  //           <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
+  //         ) : (
+  //           <div className="text-center">
+  //             {isConnecting ? (
+  //               <>
+  //                 <Loader2 className="h-12 w-12 text-primary mx-auto mb-4 animate-spin" />
+  //                 <p className="text-muted-foreground">Connecting...</p>
+  //               </>
+  //             ) : (
+  //               <>
+  //                 <div className="w-24 h-24 rounded-full bg-muted mx-auto mb-4 flex items-center justify-center">
+  //                   <Users className="h-12 w-12 text-muted-foreground" />
+  //                 </div>
+  //                 <p className="text-muted-foreground">Waiting for {participantName}...</p>
+  //                 <p className="text-sm text-muted-foreground mt-1">{getConnectionStatusText()}</p>
+  //               </>
+  //             )}
+  //           </div>
+  //         )}
+  //       </Card>
+
+  //       <Card className="w-64 h-48 absolute bottom-24 right-8 overflow-hidden shadow-xl border-2 border-primary/20">
+  //         {isVideoOn && localStream ? (
+  //           <video ref={localVideoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
+  //         ) : (
+  //           <div className="w-full h-full bg-muted flex items-center justify-center">
+  //             <VideoOff className="h-8 w-8 text-muted-foreground" />
+  //           </div>
+  //         )}
+  //         <div className="absolute bottom-2 left-2 text-xs text-white bg-black/50 px-2 py-1 rounded">You</div>
+  //       </Card>
+  //     </div>
+
+  //     <div className="flex items-center justify-center gap-4 p-6 bg-background/80 border-t border-border">
+  //       <Button variant={isMuted ? 'destructive' : 'outline'} size="lg" className="rounded-full w-14 h-14" onClick={handleToggleMute}>
+  //         {isMuted ? <MicOff className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
+  //       </Button>
+  //       <Button variant={!isVideoOn ? 'destructive' : 'outline'} size="lg" className="rounded-full w-14 h-14" onClick={handleToggleVideo}>
+  //         {isVideoOn ? <Video className="h-6 w-6" /> : <VideoOff className="h-6 w-6" />}
+  //       </Button>
+  //       {/* <Button variant={isRecording ? 'destructive' : 'outline'} size="lg" className="rounded-full w-14 h-14" onClick={handleToggleRecording}>
+  //         <Circle className={cn('h-6 w-6', isRecording && 'fill-current')} />
+  //       </Button> */}
+  //       <Button variant="destructive" size="lg" className="rounded-full w-16 h-16" onClick={handleEndCall}>
+  //         <PhoneOff className="h-7 w-7" />
+  //       </Button>
+  //       <Button
+  //         variant={!isSpeakerOn ? 'destructive' : 'outline'}
+  //         size="lg"
+  //         className="rounded-full w-14 h-14"
+  //         onClick={handleToggleSpeaker}
+  //       >
+  //         {isSpeakerOn ? <Volume2 className="h-6 w-6" /> : <VolumeX className="h-6 w-6" />}
+  //       </Button>
+  //     </div>
+  //   </div>
+  // );
   return (
-    <div ref={containerRef} className={cn('fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex flex-col', isFullscreen && 'bg-black')}>
-      <div className="flex items-center justify-between p-4 border-b border-border bg-background/80">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-            <Users className="h-5 w-5 text-primary" />
+    <div
+      ref={containerRef}
+      className={cn(
+        "fixed inset-0 z-50 bg-black flex flex-col",
+        isFullscreen && "bg-black"
+      )}
+    >
+      {/* Header */}
+      <div className="h-16 px-4 md:px-6 border-b border-white/10 flex items-center justify-between bg-black/60 backdrop-blur-md">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-full overflow-hidden bg-primary/20 shrink-0 border border-white/10">
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt={participantName}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <Users className="h-5 w-5 text-primary" />
+              </div>
+            )}
           </div>
-          <div>
-            <h3 className="font-semibold">Video Call</h3>
-            <div className="flex items-center gap-2">
-              <p className="text-sm text-muted-foreground">with {participantName}</p>
-              <span className={cn('text-xs px-2 py-0.5 rounded-full',
-                connectionState === 'connected' ? 'bg-emerald-500/20 text-emerald-600' :
-                  connectionState === 'connecting' ? 'bg-amber-500/20 text-amber-600' :
-                    'bg-muted text-muted-foreground')}>
-                {getConnectionStatusText()}
-              </span>
-            </div>
+
+          <div className="min-w-0">
+            <h3 className="text-white font-semibold truncate">
+              {participantName}
+            </h3>
+
+            <p className="text-xs text-white/70">
+              {getConnectionStatusText()}
+            </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {isRecording && (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-red-500/20 rounded-full">
-              <Circle className="h-3 w-3 fill-red-500 text-red-500 animate-pulse" />
-              <span className="text-sm font-medium text-red-600">REC {formatDuration(recordingDuration)}</span>
-            </div>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleFullscreen}
+          className="text-white hover:bg-white/10"
+        >
+          {isFullscreen ? (
+            <Minimize2 className="h-5 w-5" />
+          ) : (
+            <Maximize2 className="h-5 w-5" />
           )}
-          <Button variant="ghost" size="icon" onClick={toggleFullscreen}>
-            {isFullscreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
-          </Button>
-        </div>
+        </Button>
       </div>
 
-      <div className="flex-1 p-4 flex gap-4 relative">
-        <Card className="flex-1 bg-muted/50 flex items-center justify-center relative overflow-hidden">
-          {remoteStream ? (
-            <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
-          ) : (
-            <div className="text-center">
-              {isConnecting ? (
-                <>
-                  <Loader2 className="h-12 w-12 text-primary mx-auto mb-4 animate-spin" />
-                  <p className="text-muted-foreground">Connecting...</p>
-                </>
-              ) : (
-                <>
-                  <div className="w-24 h-24 rounded-full bg-muted mx-auto mb-4 flex items-center justify-center">
-                    <Users className="h-12 w-12 text-muted-foreground" />
-                  </div>
-                  <p className="text-muted-foreground">Waiting for {participantName}...</p>
-                  <p className="text-sm text-muted-foreground mt-1">{getConnectionStatusText()}</p>
-                </>
-              )}
+      {/* Main Video Area */}
+      <div className="flex-1 relative overflow-hidden bg-black">
+        {remoteStream ? (
+          <video
+            ref={remoteVideoRef}
+            autoPlay
+            playsInline
+            className="w-full h-full object-contain bg-black"
+          />
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
+            <div className="w-24 h-24 rounded-full bg-white/10 flex items-center justify-center mb-4">
+              <Users className="h-10 w-10 text-white/70" />
             </div>
-          )}
-        </Card>
 
-        <Card className="w-64 h-48 absolute bottom-24 right-8 overflow-hidden shadow-xl border-2 border-primary/20">
+            <p className="text-white text-lg font-medium">
+              {participantName}
+            </p>
+
+            <p className="text-white/60 text-sm mt-2">
+              {getConnectionStatusText()}
+            </p>
+
+            {isConnecting && (
+              <Loader2 className="h-8 w-8 text-white animate-spin mt-4" />
+            )}
+          </div>
+        )}
+
+        {/* Self View */}
+        <div className="absolute bottom-4 right-4 w-28 h-36 sm:w-36 sm:h-48 md:w-52 md:h-64 rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-zinc-900">
           {isVideoOn && localStream ? (
-            <video ref={localVideoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
+            <video
+              ref={localVideoRef}
+              autoPlay
+              muted
+              playsInline
+              className="w-full h-full object-cover scale-x-[-1]"
+            />
           ) : (
-            <div className="w-full h-full bg-muted flex items-center justify-center">
-              <VideoOff className="h-8 w-8 text-muted-foreground" />
+            <div className="w-full h-full flex items-center justify-center">
+              <VideoOff className="h-8 w-8 text-white/50" />
             </div>
           )}
-          <div className="absolute bottom-2 left-2 text-xs text-white bg-black/50 px-2 py-1 rounded">You</div>
-        </Card>
+
+          <div className="absolute bottom-2 left-2 text-[10px] px-2 py-1 rounded-full bg-black/60 text-white">
+            You
+          </div>
+        </div>
       </div>
 
-      <div className="flex items-center justify-center gap-4 p-6 bg-background/80 border-t border-border">
-        <Button variant={isMuted ? 'destructive' : 'outline'} size="lg" className="rounded-full w-14 h-14" onClick={handleToggleMute}>
-          {isMuted ? <MicOff className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
-        </Button>
-        <Button variant={!isVideoOn ? 'destructive' : 'outline'} size="lg" className="rounded-full w-14 h-14" onClick={handleToggleVideo}>
-          {isVideoOn ? <Video className="h-6 w-6" /> : <VideoOff className="h-6 w-6" />}
-        </Button>
-        <Button variant={isRecording ? 'destructive' : 'outline'} size="lg" className="rounded-full w-14 h-14" onClick={handleToggleRecording}>
-          <Circle className={cn('h-6 w-6', isRecording && 'fill-current')} />
-        </Button>
-        <Button variant="destructive" size="lg" className="rounded-full w-16 h-16" onClick={handleEndCall}>
-          <PhoneOff className="h-7 w-7" />
-        </Button>
+      {/* Bottom Controls */}
+      <div className="px-3 md:px-6 py-4 border-t border-white/10 bg-black/70 backdrop-blur-md">
+        <div className="flex items-center justify-center gap-3 md:gap-5 flex-wrap">
+
+          <Button
+            variant={isMuted ? "destructive" : "outline"}
+            size="icon"
+            onClick={handleToggleMute}
+            className="w-14 h-14 rounded-full"
+          >
+            {isMuted ? (
+              <MicOff className="h-5 w-5" />
+            ) : (
+              <Mic className="h-5 w-5" />
+            )}
+          </Button>
+
+          <Button
+            variant={!isVideoOn ? "destructive" : "outline"}
+            size="icon"
+            onClick={handleToggleVideo}
+            className="w-14 h-14 rounded-full"
+          >
+            {isVideoOn ? (
+              <Video className="h-5 w-5" />
+            ) : (
+              <VideoOff className="h-5 w-5" />
+            )}
+          </Button>
+
+          <Button
+            variant="destructive"
+            size="icon"
+            onClick={handleEndCall}
+            className="w-16 h-16 rounded-full"
+          >
+            <PhoneOff className="h-6 w-6" />
+          </Button>
+
+          <Button
+            variant={!isSpeakerOn ? "destructive" : "outline"}
+            size="icon"
+            onClick={handleToggleSpeaker}
+            className="w-14 h-14 rounded-full"
+          >
+            {isSpeakerOn ? (
+              <Volume2 className="h-5 w-5" />
+            ) : (
+              <VolumeX className="h-5 w-5" />
+            )}
+          </Button>
+
+        </div>
       </div>
     </div>
   );

@@ -81,9 +81,9 @@ export const useWebRTC = ({
       });
 
       // Start with mic muted by default
-      stream.getAudioTracks().forEach((track) => {
-        track.enabled = false;
-      });
+      // stream.getAudioTracks().forEach((track) => {
+      //   track.enabled = false;
+      // });
 
       localStreamRef.current = stream;
       setLocalStream(stream);
