@@ -39,34 +39,43 @@ export const LanguageSelector = ({
         <Globe className="h-4 w-4" />
         <p>Select languages you can consult in</p>
       </div>
-      
+
       <div className="flex flex-wrap gap-2">
         {LANGUAGE_OPTIONS.map((lang) => {
           const isSelected = selected.includes(lang.label);
-          
+
           return (
             <Badge
               key={lang.code}
               variant={isSelected ? 'default' : 'outline'}
               className={cn(
-                "cursor-pointer py-2 px-3 text-sm transition-all duration-200 hover:scale-105",
-                isSelected && "bg-primary hover:bg-primary/90",
-                !isSelected && "hover:bg-primary/10 hover:border-primary"
+                // 🔥 COMPACT STYLE
+                "cursor-pointer px-2.5 py-1 text-[11px] sm:text-xs rounded-md flex items-center gap-1.5",
+                "transition-all duration-200",
+
+                "hover:bg-primary/10 hover:border-primary",
+
+                isSelected && "bg-primary text-white border-primary"
               )}
               onClick={() => toggleLanguage(lang.label)}
             >
-              <span className="mr-1.5 text-base">{lang.flag}</span>
-              {lang.label}
+              <span className="text-sm">{lang.flag}</span>
+
+              {/* truncate for mobile */}
+              <span className="truncate max-w-[80px] sm:max-w-none">
+                {lang.label}
+              </span>
+
               {isSelected ? (
-                <X className="h-3 w-3 ml-2" />
+                <X className="h-3 w-3" />
               ) : (
-                <Plus className="h-3 w-3 ml-2" />
+                <Plus className="h-3 w-3" />
               )}
             </Badge>
           );
         })}
       </div>
-      
+
       {selected.length > 0 && (
         <p className="text-xs text-muted-foreground">
           {selected.length} language{selected.length > 1 ? 's' : ''} selected

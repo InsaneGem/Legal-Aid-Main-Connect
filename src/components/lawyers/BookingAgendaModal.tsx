@@ -105,7 +105,7 @@ export const BookingAgendaModal = ({
         setConsultationType(initialType);
     }, [initialType]);
 
-    // const minimumMinutes = 10;
+
     const minimumMinutes = selectedMinutes;
     const pricePerMinute = lawyer.price_per_minute || 5;
     const sessionCost = minimumMinutes * pricePerMinute;

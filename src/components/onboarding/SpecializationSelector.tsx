@@ -46,36 +46,39 @@ export const SpecializationSelector = ({
           {selected.length}/{maxSelections} selected
         </Badge>
       </div>
-      
+
       <div className="flex flex-wrap gap-2">
         {SPECIALIZATION_OPTIONS.map((spec) => {
           const isSelected = selected.includes(spec.label);
           const isDisabled = !isSelected && selected.length >= maxSelections;
-          
+
           return (
             <Badge
               key={spec.id}
               variant={isSelected ? 'default' : 'outline'}
               className={cn(
-                "cursor-pointer py-2.5 px-4 text-sm transition-all duration-200 hover:scale-105",
-                isSelected && "bg-primary hover:bg-primary/90",
-                isDisabled && "opacity-50 cursor-not-allowed hover:scale-100",
-                !isSelected && !isDisabled && "hover:bg-primary/10 hover:border-primary"
+                "cursor-pointer px-2.5 py-1 text-xs rounded-full h-auto whitespace-nowrap",
+                "transition-all duration-200",
+                "hover:scale-[1.03] active:scale-[0.97]",
+
+                isSelected && "bg-primary text-white border-primary shadow-sm",
+                isDisabled && "opacity-40 cursor-not-allowed hover:scale-100",
+                !isSelected && !isDisabled && "text-muted-foreground hover:bg-muted"
               )}
               onClick={() => !isDisabled && toggleSpecialization(spec.label)}
             >
-              <span className="mr-1.5">{spec.icon}</span>
+              <span className="mr-1">{spec.icon}</span>
               {spec.label}
               {isSelected ? (
-                <X className="h-3 w-3 ml-2" />
+                <X className="h-3 w-3 ml-1.5" />
               ) : (
-                <Plus className="h-3 w-3 ml-2" />
+                <Plus className="h-3 w-3 ml-1.5" />
               )}
             </Badge>
           );
         })}
       </div>
-      
+
       {selected.length === 0 && (
         <p className="text-xs text-amber-600 flex items-center gap-1">
           Please select at least one specialization

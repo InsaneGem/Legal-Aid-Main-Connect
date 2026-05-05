@@ -468,7 +468,7 @@ const LawyerManageAccount = () => {
                   <CardTitle className="flex items-center gap-2 text-lg">
                     <DollarSign className="h-5 w-5" /> Pricing
                   </CardTitle>
-                  <CardDescription>Set your consultation rates</CardDescription>
+                  <CardDescription>Set your consultation ratess</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
